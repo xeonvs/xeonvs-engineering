@@ -4,7 +4,7 @@ Use this reference when adding, moving, validating, or retiring repository agent
 
 Stable contract markers:
 
-- `instruction_contract_version: 2`
+- `instruction_contract_version: 3`
 - `canonical_invariant_owner: exactly_one`
 - `target_agents_role: router_only`
 - `pitfalls_role: incident_catalog_only`
@@ -101,9 +101,9 @@ Retirement removes obsolete catalog detail; it does not delete the canonical inv
 
 The target upgrader may create a missing document or replace content with a known pristine template fingerprint. Customized shared instruction documents are never semantically rewritten automatically. Report `instruction_migration_required` or `instruction_conflict`, preserve the bytes, and do not write the new workflow version until the complete instruction contract passes.
 
-Contract version 2 requires these target invariant IDs under one reachable local owner: `workflow.efficient-execution`, `workflow.evidence-driven-completion`, and `workflow.completion-driven-wait`. It also requires `repository-change` and `long-running-execution` routes to that owner. The validator returns `contract_version`, `required_contract_version`, `missing_required_invariants`, and `missing_required_routes` so migration is driven by structure rather than phrase matching.
+Contract version 3 requires these target invariant IDs under one reachable local owner: `workflow.efficient-execution`, `workflow.evidence-driven-completion`, `workflow.completion-driven-wait`, and `workflow.review-before-commit`. The review invariant requires a bounded semantic review of every complete logical commit slice plus an aggregate final-diff review before staging or delivery; automated green does not replace either boundary. The contract also requires `repository-change` and `long-running-execution` routes to that owner. The validator returns `contract_version`, `required_contract_version`, `missing_required_invariants`, and `missing_required_routes` so migration is driven by structure rather than phrase matching.
 
-Known pristine version-1 templates may be replaced automatically by fingerprint. For customized version-1 instructions, return `instruction_migration_required` with `agent_action: review_instruction_migration`; do not ask the user merely because prose is customized. The model reads the existing owner, recognizes semantically equivalent rules, and either preserves that owner with the required stable marker or adds only the missing rule and route. Ask one targeted question only when bounded inspection finds a genuine ownership conflict or incompatible rules. Write the new skill/version stamp only after the full version-2 contract validates.
+Known pristine version-1 or version-2 templates may be replaced automatically by fingerprint. For customized older instructions, return `instruction_migration_required` with `agent_action: review_instruction_migration`; do not ask the user merely because prose is customized. The model reads the existing owner, recognizes semantically equivalent rules, and either preserves that owner with the required stable marker or adds only the missing rule and route. Ask one targeted question only when bounded inspection finds a genuine ownership conflict or incompatible rules. Write the new skill/version stamp only after the full version-3 contract validates.
 
 Exact normalized duplicate invariant bodies are errors. High-similarity bodies are review warnings, because similarity alone is not enough to prove semantic identity. Conflicting plan exceptions are errors even when phrased as a “compact checked queue” rather than a “compact plan.”
 

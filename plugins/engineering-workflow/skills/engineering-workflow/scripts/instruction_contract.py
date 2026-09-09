@@ -10,7 +10,6 @@ from typing import Any
 
 from common import CANONICAL_FILES, IGNORED_DIRS
 
-
 INVARIANT_RE = re.compile(r'<!--\s*ew:invariant\s+id="(?P<id>[a-z0-9][a-z0-9._-]*)"\s*-->')
 ROUTE_RE = re.compile(r"<!--\s*ew:route\s+(?P<attrs>.*?)\s*-->")
 ATTR_RE = re.compile(r'(?P<key>[a-z_]+)="(?P<value>[^"]*)"')
@@ -18,11 +17,12 @@ INCIDENT_RE = re.compile(r"(?m)^###\s+(?P<id>INC-\d+)\b(?P<title>[^\n]*)$")
 CAUSE_CODES = {"missing_rule", "conflicting_rule", "unreachable_rule", "unguarded_rule"}
 INCIDENT_STATUSES = {"active", "guarded", "retired"}
 GUARD_KINDS = {"test", "lint", "harness", "release_gate", "manual_review"}
-REQUIRED_CONTRACT_VERSION = 2
+REQUIRED_CONTRACT_VERSION = 3
 REQUIRED_INVARIANTS = {
     "workflow.efficient-execution",
     "workflow.evidence-driven-completion",
     "workflow.completion-driven-wait",
+    "workflow.review-before-commit",
 }
 REQUIRED_ROUTES = {
     "repository-change": CANONICAL_FILES["principles"],
@@ -97,7 +97,7 @@ def _parse_invariants(root: Path, docs: list[Path]) -> tuple[list[dict[str, str]
         matches = list(INVARIANT_RE.finditer(text))
         for index, match in enumerate(matches):
             end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-            block = text[match.end():end].strip()
+            block = text[match.end() : end].strip()
             heading_match = re.search(r"(?m)^#{2,6}\s+(?P<heading>[^\n]+)$", block)
             heading = heading_match.group("heading").strip() if heading_match else ""
             relative = path.relative_to(root).as_posix()
@@ -157,7 +157,9 @@ def _parse_routes(root: Path) -> tuple[list[dict[str, Any]], list[dict[str, str]
             if owner_path.startswith("skill://"):
                 continue
             if not (root / owner_path).is_file():
-                errors.append({"code": "route_owner_missing", "path": "AGENTS.md", "detail": f"{route_id}:{owner_path}"})
+                errors.append(
+                    {"code": "route_owner_missing", "path": "AGENTS.md", "detail": f"{route_id}:{owner_path}"}
+                )
         for guard in guards:
             if not _valid_guard(guard):
                 errors.append({"code": "guard_missing", "path": "AGENTS.md", "detail": f"{route_id}:{guard}"})
@@ -179,31 +181,57 @@ def _parse_incidents(root: Path) -> tuple[list[dict[str, str]], list[dict[str, s
     errors: list[dict[str, str]] = []
     incidents: list[dict[str, str]] = []
     if not re.search(r"(?m)^incident_schema_version:\s*1\s*$", text):
-        errors.append({"code": "incident_schema_missing", "path": CANONICAL_FILES["pitfalls"], "detail": "expected version 1"})
+        errors.append(
+            {"code": "incident_schema_missing", "path": CANONICAL_FILES["pitfalls"], "detail": "expected version 1"}
+        )
     matches = list(INCIDENT_RE.finditer(text))
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        body = text[match.end():end]
+        body = text[match.end() : end]
         fields: dict[str, str] = {"id": match.group("id")}
         for field_match in re.finditer(r"(?m)^-\s+(?P<key>[A-Za-z ]+):\s*(?P<value>.*)$", body):
             fields[field_match.group("key").strip()] = field_match.group("value").strip().strip("`")
         missing = sorted(REQUIRED_INCIDENT_FIELDS - fields.keys())
         if missing:
-            errors.append({"code": "incident_fields_missing", "path": CANONICAL_FILES["pitfalls"], "detail": f"{fields['id']}:{','.join(missing)}"})
+            errors.append(
+                {
+                    "code": "incident_fields_missing",
+                    "path": CANONICAL_FILES["pitfalls"],
+                    "detail": f"{fields['id']}:{','.join(missing)}",
+                }
+            )
         if fields.get("Cause") and fields["Cause"] not in CAUSE_CODES:
-            errors.append({"code": "invalid_incident_cause", "path": CANONICAL_FILES["pitfalls"], "detail": fields["Cause"]})
+            errors.append(
+                {"code": "invalid_incident_cause", "path": CANONICAL_FILES["pitfalls"], "detail": fields["Cause"]}
+            )
         if fields.get("Status") and fields["Status"] not in INCIDENT_STATUSES:
-            errors.append({"code": "invalid_incident_status", "path": CANONICAL_FILES["pitfalls"], "detail": fields["Status"]})
+            errors.append(
+                {"code": "invalid_incident_status", "path": CANONICAL_FILES["pitfalls"], "detail": fields["Status"]}
+            )
         if fields.get("Guard") and not _valid_guard(fields["Guard"]):
-            errors.append({"code": "guard_missing", "path": CANONICAL_FILES["pitfalls"], "detail": f"{fields['id']}:{fields['Guard']}"})
+            errors.append(
+                {
+                    "code": "guard_missing",
+                    "path": CANONICAL_FILES["pitfalls"],
+                    "detail": f"{fields['id']}:{fields['Guard']}",
+                }
+            )
         incidents.append(fields)
     if re.search(r"(?mi)^-\s*(?:Better default|Rule|Required action):", text):
-        errors.append({"code": "imperative_incident_field", "path": CANONICAL_FILES["pitfalls"], "detail": "normative field"})
+        errors.append(
+            {"code": "imperative_incident_field", "path": CANONICAL_FILES["pitfalls"], "detail": "normative field"}
+        )
     for line in text.splitlines():
         if re.match(r"(?i)^-\s*Evidence:", line):
             continue
         if re.match(r"(?i)^-\s*(?:always|never|must|do not|don't|required to|should)\b", line.strip()):
-            errors.append({"code": "imperative_incident_body", "path": CANONICAL_FILES["pitfalls"], "detail": "imperative list item"})
+            errors.append(
+                {
+                    "code": "imperative_incident_body",
+                    "path": CANONICAL_FILES["pitfalls"],
+                    "detail": "imperative list item",
+                }
+            )
             break
     return incidents, errors
 
@@ -212,14 +240,18 @@ def _duplicate_findings(invariants: list[dict[str, str]]) -> tuple[list[dict[str
     errors: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     for index, left in enumerate(invariants):
-        for right in invariants[index + 1:]:
+        for right in invariants[index + 1 :]:
             if len(left["body"]) < 40 or len(right["body"]) < 40:
                 continue
             detail = f"{left['id']}:{right['id']}"
             if left["body"] == right["body"]:
-                errors.append({"code": "duplicate_invariant_body", "path": f"{left['owner']},{right['owner']}", "detail": detail})
+                errors.append(
+                    {"code": "duplicate_invariant_body", "path": f"{left['owner']},{right['owner']}", "detail": detail}
+                )
             elif difflib.SequenceMatcher(None, left["body"], right["body"]).ratio() >= 0.88:
-                warnings.append({"code": "similar_invariant_body", "path": f"{left['owner']},{right['owner']}", "detail": detail})
+                warnings.append(
+                    {"code": "similar_invariant_body", "path": f"{left['owner']},{right['owner']}", "detail": detail}
+                )
     return errors, warnings
 
 
@@ -229,7 +261,13 @@ def _planning_conflicts(root: Path, docs: list[Path]) -> list[dict[str, str]]:
         text = _read(path)
         for pattern in CONFLICT_PATTERNS:
             if pattern.search(text):
-                findings.append({"code": "conflicting_planning_rule", "path": path.relative_to(root).as_posix(), "detail": "compact or plan-bypass policy"})
+                findings.append(
+                    {
+                        "code": "conflicting_planning_rule",
+                        "path": path.relative_to(root).as_posix(),
+                        "detail": "compact or plan-bypass policy",
+                    }
+                )
                 break
     return findings
 
@@ -293,7 +331,13 @@ def check_instruction_contract(root: Path) -> dict[str, Any]:
                 }
             )
         if pitfalls.exists() and not re.search(r"(?m)^incident_schema_version:\s*1\s*$", _read(pitfalls)):
-            errors.append({"code": "instruction_migration_required", "path": CANONICAL_FILES["pitfalls"], "detail": "incident catalog migration required"})
+            errors.append(
+                {
+                    "code": "instruction_migration_required",
+                    "path": CANONICAL_FILES["pitfalls"],
+                    "detail": "incident catalog migration required",
+                }
+            )
 
     invariant_by_id = {item["id"]: item for item in invariants}
     for incident in incidents:
@@ -303,17 +347,31 @@ def check_instruction_contract(root: Path) -> dict[str, Any]:
         invariant = invariant_by_id.get(invariant_id)
         route = route_by_id.get(route_id)
         if invariant is None:
-            errors.append({"code": "invariant_owner_missing", "path": CANONICAL_FILES["pitfalls"], "detail": f"{incident_id}:{invariant_id}"})
+            errors.append(
+                {
+                    "code": "invariant_owner_missing",
+                    "path": CANONICAL_FILES["pitfalls"],
+                    "detail": f"{incident_id}:{invariant_id}",
+                }
+            )
         else:
             expected_owner = invariant["owner"] + (f"#{invariant['anchor']}" if invariant["anchor"] else "")
             if incident.get("Owner", "") != expected_owner:
-                errors.append({"code": "invariant_owner_mismatch", "path": CANONICAL_FILES["pitfalls"], "detail": incident_id})
+                errors.append(
+                    {"code": "invariant_owner_mismatch", "path": CANONICAL_FILES["pitfalls"], "detail": incident_id}
+                )
         if route is None:
-            errors.append({"code": "route_missing", "path": CANONICAL_FILES["pitfalls"], "detail": f"{incident_id}:{route_id}"})
+            errors.append(
+                {"code": "route_missing", "path": CANONICAL_FILES["pitfalls"], "detail": f"{incident_id}:{route_id}"}
+            )
         elif invariant is not None and invariant["owner"] not in [owner.split("#", 1)[0] for owner in route["owners"]]:
-            errors.append({"code": "unreachable_invariant", "path": "AGENTS.md", "detail": f"{incident_id}:{invariant_id}"})
+            errors.append(
+                {"code": "unreachable_invariant", "path": "AGENTS.md", "detail": f"{incident_id}:{invariant_id}"}
+            )
         elif incident.get("Guard") not in route["guards"]:
-            errors.append({"code": "guard_missing", "path": "AGENTS.md", "detail": f"{incident_id}:{incident.get('Guard', '')}"})
+            errors.append(
+                {"code": "guard_missing", "path": "AGENTS.md", "detail": f"{incident_id}:{incident.get('Guard', '')}"}
+            )
 
     error_codes = {item["code"] for item in errors}
     if not errors:
@@ -347,7 +405,9 @@ def check_instruction_contract(root: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate canonical instruction ownership, routes, incidents, and guards.")
+    parser = argparse.ArgumentParser(
+        description="Validate canonical instruction ownership, routes, incidents, and guards."
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
     check = subparsers.add_parser("check")
     check.add_argument("--repo-root", default=".")

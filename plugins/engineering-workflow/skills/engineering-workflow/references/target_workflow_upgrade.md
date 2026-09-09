@@ -94,7 +94,7 @@ Run `instruction_contract.py` during report and apply. A target version stamp re
 
 Automatic replacement is limited to missing files and known pristine template fingerprints. Existing navigation README files without managed index markers require a targeted placement decision. Create `docs`, `docs/codex`, and `docs/engineering` indexes with the canonical workflow files; create archive indexes only for archive directories that already exist or are created by the operation.
 
-For instruction contract version 2, the report exposes current/required contract versions and missing required invariant/route IDs. Replace known pristine 0.7 templates by fingerprint. For customized version-1 owners, return `agent_action: review_instruction_migration` without target writes or a new version stamp. The model reads the existing owner, preserves an equivalent rule under the required stable marker or adds only the missing rule/route, then reruns report and validation. Ask the user only when the existing repository contains incompatible owners or another genuine unresolved ownership decision.
+For instruction contract version 3, the report exposes current/required contract versions and missing required invariant/route IDs. Replace known pristine legacy templates by fingerprint. For customized older owners, return `agent_action: review_instruction_migration` without target writes or a new version stamp. Follow `instruction_lifecycle.md`: the model reads the existing owner, preserves an equivalent rule under the required stable marker or adds only the missing rule/route, then reruns report and validation. Ask the user only when the existing repository contains incompatible owners or another genuine unresolved ownership decision.
 
 ## Conflict Analysis
 
@@ -165,6 +165,8 @@ Do not replace a customized shared file wholesale. Create missing files, replace
 Every apply-time snapshot, read, atomic replacement, unlink, and rollback operation is relative to the pinned root descriptor. Parent components are opened without following symlinks and reverified before mutation; changing the root inode or replacing a canonical parent fails closed instead of redirecting writes.
 
 ## Codex Configuration
+
+When configuration is not selected, existing Codex artifacts remain unchanged; their syntax or symbolic layout does not create a configuration-migration question. Public privacy findings and actual workflow-path conflicts still follow their own gates.
 
 When `--include-agent-config` is present:
 

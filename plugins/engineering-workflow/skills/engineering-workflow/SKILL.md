@@ -2,7 +2,7 @@
 name: engineering-workflow
 description: Audit, scaffold, verify, update, or migrate a repository engineering workflow while preserving existing document ownership, user scope, validation safety, and durable execution state. Use for AGENTS/PLANS/backlog/pitfalls setup, workflow upgrades, workflow-structure verification, and prompts such as Refresh Loaded Skill, Update Installed Skill, or Upgrade A Target Workflow.
 metadata:
-  version: 0.8.2
+  version: 0.9.1
 ---
 
 # Engineering Workflow
@@ -13,7 +13,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 
 - `audit_before_edit: required`
 - `plan_schema_version: 2`
-- `instruction_contract_version: 2`
+- `instruction_contract_version: 3`
 - `orchestration_contract_version: 3`
 - `platform_compatibility_version: 1`
 - `privacy_review_contract_version: 1`
@@ -38,7 +38,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 - Repository workflow: `greenfield_scaffold`, `conservative_merge`, `read_only_verify`, `disposable_copy_verify`, or `upgrade_target_workflow`.
 - `Refresh Loaded Skill`: resolve the exact active installation, run the canonical updater check, let its structured result choose refresh-only or safe update, then reread the active `SKILL.md`. Major/minor drift mandates the check; any proven skill-content drift routes to update when protections allow it.
 - `Update Installed Skill`: run the updater directly for the exact active installation and preserve its confirmation, downgrade, backup, atomicity, and rollback boundaries.
-- `Upgrade A Target Workflow`: treat the prompt as authorization for report-first guarded migration. If the result returns `review_instruction_migration`, read the customized owner, preserve an equivalent rule or add only missing version-2 invariants/routes, then rerun the report; ask only for a genuine targeted ownership decision. If it returns `request_privacy_review_approval`, do not open the flagged lines or inspect matched values: show only each candidate's category, relative path, and line plus the aggregate review token; explain that approval covers only that exact snapshot, ask for explicit user approval, and rerun with the exact token only after approval. Never approve on the user's behalf. A `hard_block` has no approval path.
+- `Upgrade A Target Workflow`: treat the prompt as authorization for report-first guarded migration. If the result returns `review_instruction_migration`, read the customized owner, preserve an equivalent rule or add only missing version-3 invariants/routes, then rerun the report; ask only for a genuine targeted ownership decision. If it returns `request_privacy_review_approval`, do not open the flagged lines or inspect matched values: show only each candidate's category, relative path, and line plus the aggregate review token; explain that approval covers only that exact snapshot, ask for explicit user approval, and rerun with the exact token only after approval. Never approve on the user's behalf. A `hard_block` has no approval path.
 - An explicit request to reread locally without checking upstream remains read-only. Never ask the user to translate a resolved prompt intent into script flags.
 - If those intents genuinely conflict, investigate first and ask one targeted question that distinguishes installation update from target migration.
 
@@ -50,9 +50,10 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 4. For instruction changes, read `references/instruction_lifecycle.md`; preserve one canonical owner per invariant, keep target `AGENTS.md` route-only, and keep pitfalls non-normative.
 5. Use exact canonical paths, the state manifest, or managed-section markers as ownership evidence. Treat unknown files as protected until evidence or user direction resolves ownership.
 6. Read only the canonical reference for the selected mode. Preserve the dominant documentation language and use templates as structure, not as permission to overwrite repository-owned prose.
+   Before pausing for clarification or authorization, load `references/question_matrix.md`. For continuation, delegation, and handoff, use the shared sections of `references/agent_orchestration.md` selected by the platform reference.
 7. Keep deterministic work in scripts or tools. In Codex, a tool-heavy stage may use `references/agent_orchestration.md` and `scripts/assess_programmatic_stage.py`; in Claude Code use direct calls and never claim Programmatic Tool Calling.
 8. Validate within the selected safety mode. Run repository-authored checks only in a disposable copy unless live execution is explicitly authorized.
-9. Run privacy scanning over all tracked public text without printing or opening candidate values. Follow `references/privacy_and_sanitization.md` for any value-free approval response, review the diff, reconcile durable state, and close or preserve the exact resume point before handoff.
+9. Run privacy scanning over all tracked public text without printing or opening candidate values. Immediately before any authorized push, run the privacy reference's final-tree and reachable-ref secret gate; any finding blocks the push until safely classified and remediated. Follow `references/privacy_and_sanitization.md` for any value-free approval response, review the diff, reconcile durable state, and close or preserve the exact resume point before handoff.
 
 ## Canonical References
 

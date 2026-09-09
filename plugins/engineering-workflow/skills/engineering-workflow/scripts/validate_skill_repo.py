@@ -24,7 +24,6 @@ from common import (  # noqa: E402
 from instruction_contract import check_instruction_contract  # noqa: E402
 from plan_lifecycle import check_archive_indexes, closure_issues  # noqa: E402
 
-
 REQUIRED_PATHS = (
     "AGENTS.md",
     "README.md",
@@ -90,7 +89,7 @@ SKILL_REQUIRED_HEADINGS = (
 SKILL_REQUIRED_MARKERS = (
     "audit_before_edit: required",
     "plan_schema_version: 2",
-    "instruction_contract_version: 2",
+    "instruction_contract_version: 3",
     "orchestration_contract_version: 3",
     "platform_compatibility_version: 1",
     "privacy_review_contract_version: 1",
@@ -109,6 +108,7 @@ SKILL_REQUIRED_REFERENCES = (
     "references/target_workflow_upgrade.md",
     "references/validation_safety.md",
     "references/privacy_and_sanitization.md",
+    "references/question_matrix.md",
 )
 README_REQUIRED_HEADINGS = (
     "## Install with Codex or Claude Code",
@@ -143,6 +143,8 @@ CANONICAL_OWNER_MARKERS = {
     "## Cause Codes": "skill/engineering-workflow/references/instruction_lifecycle.md",
     "## Incident Catalog Schema": "skill/engineering-workflow/references/instruction_lifecycle.md",
     "## Shared Workflow Contract": "skill/engineering-workflow/references/platform_compatibility.md",
+    "## Scope And Authorization": "skill/engineering-workflow/references/question_matrix.md",
+    "## Task Continuity And Handoff": "skill/engineering-workflow/references/agent_orchestration.md",
 }
 
 
@@ -230,6 +232,7 @@ def _scan_public_privacy(repo_root: Path) -> list[str]:
 
 def _validate_yaml_shape(text: str) -> None:
     """Parse the repository's intentionally small YAML subset without third-party dependencies."""
+
     def validate_scalar(value: str, number: int) -> None:
         stack: list[str] = []
         quote: str | None = None
@@ -310,6 +313,23 @@ def _validate_skill_router(repo_root: Path) -> tuple[list[str], str | None]:
         return issues, None
     text = path.read_text(encoding="utf-8")
     metadata = _extract_frontmatter(text)
+    frontmatter = re.match(r"^---\n(?P<body>.*?)\n---(?:\n|$)", text, re.DOTALL)
+    if frontmatter:
+        override_fields = {"model", "effort", "context", "agent", "allowed-tools", "disallowed-tools", "hooks"}
+        root_fields = set()
+        for raw_key in re.findall(r"(?m)^([^\s:#][^:]*):", frontmatter.group("body")):
+            key = raw_key.strip()
+            if key.startswith('"'):
+                try:
+                    key = json.loads(key)
+                except json.JSONDecodeError:
+                    issues.append("Shared skill frontmatter has an unsupported quoted key")
+                    continue
+            elif key.startswith("'") and key.endswith("'"):
+                key = key[1:-1].replace("''", "'")
+            root_fields.add(key)
+        for field in sorted(root_fields & override_fields):
+            issues.append(f"Shared skill frontmatter must preserve native platform settings: {field}")
     if metadata.get("name") != "engineering-workflow" or not metadata.get("description"):
         issues.append("SKILL.md frontmatter is missing name or description")
     version = metadata.get("metadata.version")
@@ -433,8 +453,7 @@ def _validate_root_agents_boundary(repo_root: Path) -> list[str]:
 def _validate_source_indexes(repo_root: Path) -> list[str]:
     result = check_archive_indexes(repo_root)
     return [
-        f"Source documentation index: {item['code']} in {item['path']} ({item['detail']})"
-        for item in result["errors"]
+        f"Source documentation index: {item['code']} in {item['path']} ({item['detail']})" for item in result["errors"]
     ]
 
 
@@ -478,7 +497,14 @@ def _validate_agent_profiles(repo_root: Path) -> list[str]:
             issues.append(f"{path.name} is not parseable TOML: {exc}")
             continue
         parsed[name] = data
-        for field in ("name", "description", "developer_instructions", "model", "model_reasoning_effort", "sandbox_mode"):
+        for field in (
+            "name",
+            "description",
+            "developer_instructions",
+            "model",
+            "model_reasoning_effort",
+            "sandbox_mode",
+        ):
             if field not in data:
                 issues.append(f"{path.name} is missing required field: {field}")
     utility = parsed.get("utility", {})
@@ -488,9 +514,13 @@ def _validate_agent_profiles(repo_root: Path) -> list[str]:
     if utility.get("sandbox_mode") != "read-only":
         issues.append("Utility agent must remain read-only")
     explorer = parsed.get("explorer", {})
+    if explorer.get("model") != expected_utility_model or explorer.get("model_reasoning_effort") != "medium":
+        issues.append("Explorer agent must use the current balanced read-heavy profile")
     if explorer.get("sandbox_mode") != "read-only":
         issues.append("Explorer agent must remain read-only")
     reviewer = parsed.get("reviewer", {})
+    if reviewer.get("model") != "gpt-" + "6-astra":
+        issues.append("Reviewer agent must use the current Codex review model profile")
     if reviewer.get("model_reasoning_effort") != "high" or reviewer.get("sandbox_mode") != "read-only":
         issues.append("Reviewer agent must use high reasoning in read-only mode")
     reference = repo_root / "skill/engineering-workflow/references/agent_orchestration.md"
@@ -504,10 +534,7 @@ def _validate_agent_profiles(repo_root: Path) -> list[str]:
 
 def _validate_programmatic_tool_assets(repo_root: Path) -> list[str]:
     issues: list[str] = []
-    template_path = (
-        repo_root
-        / "skill/engineering-workflow/assets/templates/PROGRAMMATIC_TOOL_STAGE.md.tmpl"
-    )
+    template_path = repo_root / "skill/engineering-workflow/assets/templates/PROGRAMMATIC_TOOL_STAGE.md.tmpl"
     if template_path.exists():
         text = template_path.read_text(encoding="utf-8")
         expected = {
@@ -623,11 +650,15 @@ def _validate_marketplace_package(repo_root: Path, version: str | None) -> list[
         and path.suffix != ".pyc"
         and path.name != ".DS_Store"
     }
-    packaged_files = {
-        path.relative_to(packaged).as_posix(): path
-        for path in packaged.rglob("*")
-        if path.is_file() and not path.is_symlink()
-    } if packaged.is_dir() else {}
+    packaged_files = (
+        {
+            path.relative_to(packaged).as_posix(): path
+            for path in packaged.rglob("*")
+            if path.is_file() and not path.is_symlink()
+        }
+        if packaged.is_dir()
+        else {}
+    )
     if source_files.keys() != packaged_files.keys():
         issues.append("Packaged skill file set drifts from the canonical source")
     else:
@@ -639,11 +670,15 @@ def _validate_marketplace_package(repo_root: Path, version: str | None) -> list[
         ".claude-plugin/plugin.json",
         *(f"skills/engineering-workflow/{relative}" for relative in source_files),
     }
-    actual_plugin_files = {
-        path.relative_to(plugin_root).as_posix()
-        for path in plugin_root.rglob("*")
-        if path.is_file() and not path.is_symlink()
-    } if plugin_root.is_dir() else set()
+    actual_plugin_files = (
+        {
+            path.relative_to(plugin_root).as_posix()
+            for path in plugin_root.rglob("*")
+            if path.is_file() and not path.is_symlink()
+        }
+        if plugin_root.is_dir()
+        else set()
+    )
     if actual_plugin_files != expected_plugin_files:
         issues.append("Marketplace package contains missing or unmanaged files")
     return issues

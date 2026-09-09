@@ -11,6 +11,8 @@ Stable contract markers:
 - `compressed_active_plan: forbidden`
 - `closure_transition: checked`
 - `archive_indexing: atomic`
+- `archive_ownership: explicit_or_default`
+- `active_plan_state: atomic`
 
 ## Contents
 
@@ -129,6 +131,10 @@ Every documentation directory created by the skill receives a navigation-only RE
 Create archive directories lazily when their first record is retained. Do not create empty archive trees only to hold indexes. Managed index content is bounded by `<!-- engineering-workflow:index:start -->` and `<!-- engineering-workflow:index:end -->`. Preserve text outside those markers; an existing unmarked README requires a migration decision rather than replacement.
 
 Each archive record appears exactly once in its category index, every link resolves, and the archive root links every existing category. Existing `docs/exec-plans` remains protected unless explicit ownership says otherwise.
+
+The optional workflow-state archive contract is all-or-nothing: `plan_archive_path` names the plan archive directory, `plan_archive_indexes` lists its managed index graph from the leaf archive index to each parent navigation index, and `active_plan` is `PLANS.md` while an active plan exists or `null` after closure. New state manifests declare the canonical `docs/archive/plans` graph. Legacy manifests with none of these keys retain that canonical default; a partial, conflicting, unsafe, symbolic, or unmanaged declaration fails closed. Never infer a custom archive owner from a directory name or a broad path classification.
+
+When the explicit graph is present, start or resume work by setting `active_plan: PLANS.md`. Compact or archive closure updates root plan state and clears `active_plan` in the same atomic transaction. Archive closure also writes the completed plan to the declared directory and updates every declared managed index without creating a competing default archive tree. A missing declared index may be created only when that exact path is listed in `managed_paths`; existing text outside managed index markers remains repository-owned.
 
 ## Backlog Lifecycle
 

@@ -7,18 +7,19 @@ Stable contract marker: `orchestration_contract_version: 3`.
 ## Contents
 
 1. Default Route
-2. Deterministic Route
-3. Programmatic Tool Route
-4. Utility Route
-5. Explorer Route
-6. Standard Worker Route
-7. Review Route
-8. Exceptional Quality Route
-9. Fan-Out And Nesting
-10. Shared State
-11. Subagent Contract
-12. Monitoring And Long-Running Work
-13. Configuration Boundaries
+2. Task Continuity And Handoff
+3. Deterministic Route
+4. Programmatic Tool Route
+5. Utility Route
+6. Explorer Route
+7. Standard Worker Route
+8. Review Route
+9. Exceptional Quality Route
+10. Fan-Out And Nesting
+11. Shared State
+12. Subagent Contract
+13. Monitoring And Long-Running Work
+14. Configuration Boundaries
 
 ## Default Route
 
@@ -27,6 +28,16 @@ Use one root agent by default. Add a subagent only when the delegated work is in
 Tool availability is not a reason to delegate. Keep ordered dependency chains, small tasks, shared-resource work, and tasks dominated by one slow external operation with the root agent.
 
 The root agent owns user communication, scope decisions, approval boundaries, final synthesis, validation reconciliation, and task closure.
+
+When delegation is permitted by the host and the criteria above are met, delegate the independent work that has a concrete latency, context-isolation, or coverage benefit. Prefer two or three bounded workers; preserve native agent/model selection on the chosen platform. A broad prompting example is not permission to enable recursive delegation or change host settings.
+
+## Task Continuity And Handoff
+
+Carry the user's intended task through its verified completion within the established scope. Before asking for a decision or permission, follow `question_matrix.md` rather than treating a reference to approval as a fresh approval requirement.
+
+Treat a new message during work as steering the active task unless the user clearly cancels it or requests an incompatible replacement. Incorporate corrections and additions, answer side questions briefly, then continue the outstanding work. Preserve completed results, the original objective, and accepted constraints across interruptions or compaction; reconcile changed requirements and the next safe action in the durable plan before further implementation.
+
+Make progress updates and handoff concise and outcome-led. Explain the result, material decisions, validation evidence, and remaining work in plain language; use lists or tables when they improve comparison or sequencing. Preserve the user's requested detail and complete evidence, linking durable artifacts rather than repeating logs or successful checks.
 
 ## Deterministic Route
 

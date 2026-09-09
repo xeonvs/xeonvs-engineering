@@ -18,7 +18,7 @@ from common import (
     validate_plan_schema,
 )
 from instruction_contract import check_instruction_contract
-from plan_lifecycle import check_archive_indexes, closure_issues
+from plan_lifecycle import check_plan_lifecycle, closure_issues
 
 
 def validate_repo(
@@ -32,7 +32,8 @@ def validate_repo(
     errors: list[str] = []
     warnings: list[str] = []
     instruction_contract = check_instruction_contract(repo)
-    archive_indexes = check_archive_indexes(repo)
+    plan_lifecycle = check_plan_lifecycle(repo)
+    archive_indexes = plan_lifecycle["archive_indexes"]
 
     for index, command in enumerate(check_commands or [], start=1):
         safety = classify_command_safety(command)
@@ -51,9 +52,7 @@ def validate_repo(
             disposable_results = run_in_disposable_copy(repo, run_commands, timeout_seconds=timeout_seconds)
             for result in disposable_results:
                 if result["status"] != "passed":
-                    errors.append(
-                        f"Disposable command did not pass: {result['command']} ({result['status']})"
-                    )
+                    errors.append(f"Disposable command did not pass: {result['command']} ({result['status']})")
 
     for rel_path in list(CANONICAL_FILES.values()) + list(OPTIONAL_FILES.values()):
         path = repo / rel_path
@@ -86,31 +85,38 @@ def validate_repo(
         if line_count > 220:
             warnings.append(f"AGENTS.md is long ({line_count} lines); keep it map-like")
         for issue in instruction_contract["errors"]:
-            errors.append(
-                f"Instruction contract error: {issue['code']} in {issue['path']} ({issue['detail']})"
-            )
+            errors.append(f"Instruction contract error: {issue['code']} in {issue['path']} ({issue['detail']})")
         for issue in instruction_contract["warnings"]:
-            warnings.append(
-                f"Instruction contract warning: {issue['code']} in {issue['path']} ({issue['detail']})"
-            )
+            warnings.append(f"Instruction contract warning: {issue['code']} in {issue['path']} ({issue['detail']})")
 
     state_path = repo / "docs/codex/ENGINEERING_WORKFLOW_STATE.yaml"
     state_text = state_path.read_text(encoding="utf-8") if state_path.exists() else ""
     indexes_required = bool(
-        re.search(r"(?m)^instruction_contract_version:\s*[12]\s*$", state_text)
+        re.search(r"(?m)^instruction_contract_version:\s*[123]\s*$", state_text)
         or (
             agents_path.exists()
             and re.search(
-                r"(?m)^instruction_contract_version:\s*[12]\s*$",
+                r"(?m)^instruction_contract_version:\s*[123]\s*$",
                 agents_path.read_text(encoding="utf-8"),
             )
         )
     )
     if indexes_required:
-        for issue in archive_indexes["errors"]:
-            errors.append(f"Archive index error: {issue['code']} in {issue['path']} ({issue['detail']})")
+        for issue in plan_lifecycle["errors"]:
+            if issue["code"] in {"plan_schema", "plan_state"}:
+                continue
+            category = (
+                "Archive index error"
+                if issue["code"].startswith("index_") or issue["code"] == "archive_orphan"
+                else "Plan lifecycle error"
+            )
+            errors.append(f"{category}: {issue['code']} in {issue['path']} ({issue['detail']})")
 
-    if audit["repo_maturity"] == "mature_repo" and audit["retained_history"] and not audit["optional_files"]["migration_note"]:
+    if (
+        audit["repo_maturity"] == "mature_repo"
+        and audit["retained_history"]
+        and not audit["optional_files"]["migration_note"]
+    ):
         warnings.append("Retained historical plan trees detected without exec plan migration note")
     if audit["prompt_injection_risks"]:
         warnings.append(
@@ -132,11 +138,15 @@ def validate_repo(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate a target repository without trusting repo-authored commands.")
+    parser = argparse.ArgumentParser(
+        description="Validate a target repository without trusting repo-authored commands."
+    )
     parser.add_argument("repo", help="Path to the target repository")
     parser.add_argument("--mode", choices=["read-only", "copy", "live"], default="read-only")
     parser.add_argument("--check-command", action="append", default=[], help="Classify a command without executing it")
-    parser.add_argument("--run-command", action="append", default=[], help="Run a copy-only command in a disposable copy")
+    parser.add_argument(
+        "--run-command", action="append", default=[], help="Run a copy-only command in a disposable copy"
+    )
     parser.add_argument("--timeout-seconds", type=int, default=300)
     args = parser.parse_args()
 

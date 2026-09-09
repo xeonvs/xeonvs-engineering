@@ -8,6 +8,9 @@ source_ref: "{{ source_ref }}"
 source_commit: "{{ source_commit }}"
 managed_paths:
   - docs/codex/ENGINEERING_WORKFLOW_STATE.yaml
+  - docs/README.md
+  - docs/archive/README.md
+  - docs/archive/plans/README.md
 shared_paths:
   - AGENTS.md
   - PLANS.md
@@ -15,7 +18,13 @@ shared_paths:
   - docs/codex/TASKS_BACKLOG.md
   - docs/codex/AGENT_EXECUTION_PITFALLS.md
 protected_paths: []
+plan_archive_path: docs/archive/plans
+plan_archive_indexes:
+  - docs/archive/plans/README.md
+  - docs/archive/README.md
+  - docs/README.md
+active_plan: PLANS.md
 runtime_agent_config_managed: false
-instruction_contract_version: 2
+instruction_contract_version: 3
 planning_contract_version: 2
 orchestration_contract_version: 3

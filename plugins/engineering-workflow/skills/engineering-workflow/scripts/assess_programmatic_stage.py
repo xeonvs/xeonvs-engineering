@@ -7,13 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-
-TEMPLATE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "assets"
-    / "templates"
-    / "PROGRAMMATIC_TOOL_STAGE.md.tmpl"
-)
+TEMPLATE_PATH = Path(__file__).resolve().parents[1] / "assets" / "templates" / "PROGRAMMATIC_TOOL_STAGE.md.tmpl"
 STAGE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 CALL_SHAPES = {"single", "multiple", "dependent", "unknown"}
@@ -80,14 +74,10 @@ class StageSpecError(ValueError):
 def _contains_instruction_control(value: Any) -> bool:
     if isinstance(value, str):
         lowered = value.lower()
-        return any(
-            marker in lowered
-            for marker in ("<tool_orchestration", "</tool_orchestration", "{{", "}}", "\x00")
-        )
+        return any(marker in lowered for marker in ("<tool_orchestration", "</tool_orchestration", "{{", "}}", "\x00"))
     if isinstance(value, dict):
         return any(
-            _contains_instruction_control(key) or _contains_instruction_control(item)
-            for key, item in value.items()
+            _contains_instruction_control(key) or _contains_instruction_control(item) for key, item in value.items()
         )
     if isinstance(value, (list, tuple)):
         return any(_contains_instruction_control(item) for item in value)
@@ -128,9 +118,7 @@ def _validate_schema_node(schema: Any, location: str, errors: list[str]) -> None
     if unknown:
         errors.append(f"{location} contains unsupported keywords: {', '.join(unknown)}")
     schema_type = schema.get("type")
-    if schema_type is not None and (
-        not isinstance(schema_type, str) or schema_type not in SCHEMA_TYPES
-    ):
+    if schema_type is not None and (not isinstance(schema_type, str) or schema_type not in SCHEMA_TYPES):
         errors.append(f"{location}.type is unsupported")
     if schema_type is None and "anyOf" not in schema and "oneOf" not in schema:
         errors.append(f"{location} must declare type, anyOf, or oneOf")
@@ -189,9 +177,7 @@ def _validate_schema_node(schema: Any, location: str, errors: list[str]) -> None
             errors.append(f"{location}.{keyword} requires a numeric type")
     for keyword in ("minItems", "maxItems", "minLength", "maxLength"):
         value = schema.get(keyword)
-        if value is not None and (
-            isinstance(value, bool) or not isinstance(value, int) or value < 0
-        ):
+        if value is not None and (isinstance(value, bool) or not isinstance(value, int) or value < 0):
             errors.append(f"{location}.{keyword} must be a non-negative integer")
     for keyword in ("minItems", "maxItems"):
         if keyword in schema and schema_type != "array":
@@ -255,10 +241,7 @@ def _result_schema(
 ) -> dict[str, Any]:
     evidence_schema = {
         "type": "object",
-        "properties": {
-            field: payload_schema["properties"][field]
-            for field in evidence_fields
-        },
+        "properties": {field: payload_schema["properties"][field] for field in evidence_fields},
         "required": [],
         "additionalProperties": False,
     }
@@ -370,16 +353,12 @@ def assess_stage(spec: Any) -> dict[str, Any]:
 
     max_calls = spec.get("max_calls")
     if max_calls is not None and (
-        isinstance(max_calls, bool)
-        or not isinstance(max_calls, int)
-        or not 1 <= max_calls <= 100
+        isinstance(max_calls, bool) or not isinstance(max_calls, int) or not 1 <= max_calls <= 100
     ):
         errors.append("max_calls must be an integer from 1 to 100")
     max_concurrency = spec.get("max_concurrency")
     if max_concurrency is not None and (
-        isinstance(max_concurrency, bool)
-        or not isinstance(max_concurrency, int)
-        or not 1 <= max_concurrency <= 8
+        isinstance(max_concurrency, bool) or not isinstance(max_concurrency, int) or not 1 <= max_concurrency <= 8
     ):
         errors.append("max_concurrency must be an integer from 1 to 8")
     if (
@@ -399,9 +378,7 @@ def assess_stage(spec: Any) -> dict[str, Any]:
         errors.append("multiple or dependent call_shape requires max_calls of at least 2")
     retry_limit = spec.get("retry_limit")
     if retry_limit is not None and (
-        isinstance(retry_limit, bool)
-        or not isinstance(retry_limit, int)
-        or retry_limit not in (0, 1)
+        isinstance(retry_limit, bool) or not isinstance(retry_limit, int) or retry_limit not in (0, 1)
     ):
         errors.append("retry_limit must be 0 or 1")
 

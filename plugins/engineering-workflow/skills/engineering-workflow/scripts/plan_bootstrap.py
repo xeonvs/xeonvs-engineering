@@ -39,14 +39,24 @@ def build_plan(repo: Path, repo_changing: bool = True, plan_origin: str = "direc
     optional_actions = []
     if repo_changing and audit["repo_maturity"] == "mature_repo" and audit["retained_history"]:
         optional_actions.append(
-            {"path": OPTIONAL_FILES["migration_note"], "action": "create", "reason": "retained historical plan topology"}
+            {
+                "path": OPTIONAL_FILES["migration_note"],
+                "action": "create",
+                "reason": "retained historical plan topology",
+            }
         )
 
-    if repo_changing and audit["repo_maturity"] == "mature_repo" and (
-        audit["retained_history"] or audit["compatibility_docs"]
+    if (
+        repo_changing
+        and audit["repo_maturity"] == "mature_repo"
+        and (audit["retained_history"] or audit["compatibility_docs"])
     ):
         optional_actions.append(
-            {"path": OPTIONAL_FILES["adoption_note"], "action": "create", "reason": "record adopted and adapted workflow practices"}
+            {
+                "path": OPTIONAL_FILES["adoption_note"],
+                "action": "create",
+                "reason": "record adopted and adapted workflow practices",
+            }
         )
 
     questions = []
@@ -61,7 +71,9 @@ def build_plan(repo: Path, repo_changing: bool = True, plan_origin: str = "direc
 
     notes = []
     if audit["context_docs"]:
-        notes.append("Keep existing repo-specific docs as their own sources of truth; reference them from AGENTS.md instead of rewriting them.")
+        notes.append(
+            "Keep existing repo-specific docs as their own sources of truth; reference them from AGENTS.md instead of rewriting them."
+        )
 
     return {
         "repo": str(repo.resolve()),
@@ -85,7 +97,9 @@ def build_plan(repo: Path, repo_changing: bool = True, plan_origin: str = "direc
 def main() -> int:
     parser = argparse.ArgumentParser(description="Produce a workflow bootstrap plan for a repository.")
     parser.add_argument("repo", help="Path to the target repository")
-    parser.add_argument("--read-only", action="store_true", help="Produce a read-only verification plan with no repo writes")
+    parser.add_argument(
+        "--read-only", action="store_true", help="Produce a read-only verification plan with no repo writes"
+    )
     parser.add_argument("--plan-origin", choices=sorted(PLAN_ORIGINS), default="direct_execution")
     args = parser.parse_args()
 

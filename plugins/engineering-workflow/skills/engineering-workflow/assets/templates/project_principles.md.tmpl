@@ -29,6 +29,13 @@ Preserve correctness, safety, explicit requirements, and required evidence befor
 
 Define green from the task's required checks. Treat environmental and unrelated failures explicitly, change the hypothesis from relevant evidence, make the smallest supported correction, and stop after the required final state is proven.
 
+Before every authorized push, follow the installed `engineering-workflow` privacy reference: scan the final public tree and every ref the push can expose, keep candidate values out of agent output, and block the push until every finding is safely classified and remediated. Never weaken a scanner or rewrite history merely to make the gate green.
+
+<!-- ew:invariant id="workflow.review-before-commit" -->
+### Review Before Commit
+
+Before each logical commit, review the complete intended slice against requirements, ownership, safety, tests, and unrelated-diff risk; fix findings and rerun affected checks before committing. Before final staging or delivery, review the aggregate diff again so interactions between individually reviewed slices, generated artifacts, and durable workflow state are covered.
+
 <!-- ew:invariant id="workflow.completion-driven-wait" -->
 ### Completion-Driven Wait
 
@@ -36,8 +43,11 @@ For long-running commands, follow the installed `engineering-workflow` completio
 
 ## Owned References
 
+- Host selection and native model/effort behavior: installed `engineering-workflow` skill, `references/platform_compatibility.md`.
+- Scope, existing authorization, and targeted questions: installed `engineering-workflow` skill, `references/question_matrix.md`.
 - Planning details: installed `engineering-workflow` skill, `references/planning_and_backlog.md`.
 - Instruction ownership and incident lifecycle: installed `engineering-workflow` skill, `references/instruction_lifecycle.md`.
-- Long-running execution and waiter integrity: installed `engineering-workflow` skill, `references/agent_orchestration.md`.
+- Task continuity, delegation, handoff, and waiter integrity: platform-selected shared sections of installed `engineering-workflow` skill, `references/agent_orchestration.md`.
 - Validation and execution safety: installed `engineering-workflow` skill, `references/validation_safety.md`.
+- Privacy and pre-push secret gating: installed `engineering-workflow` skill, `references/privacy_and_sanitization.md`.
 - Repository-specific architecture, product, operations, QA, release, and security rules remain under their existing owners and should be added to the matching `AGENTS.md` route.

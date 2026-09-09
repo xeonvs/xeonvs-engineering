@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlsplit, urlunsplit
 
-
 CANONICAL_UPSTREAM = "https://github.com/xeonvs/codex-engineering-workflow"
 CANONICAL_SOURCE_PATH = "skill/engineering-workflow"
 SEMVER_RE = re.compile(
@@ -163,7 +162,9 @@ def _reject_source_credentials(value: str) -> None:
         raise UpdateConflict("invalid_source_url", "Source repository URL is malformed") from exc
     http_userinfo = parsed.scheme.lower() in {"http", "https"} and parsed.username is not None
     if http_userinfo or parsed.password is not None or parsed.query or parsed.fragment:
-        raise UpdateConflict("source_credentials_refused", "Source repository URL must not contain embedded credentials")
+        raise UpdateConflict(
+            "source_credentials_refused", "Source repository URL must not contain embedded credentials"
+        )
 
 
 def _validated_expected_commit(value: str | None) -> str | None:
@@ -207,8 +208,7 @@ def validate_candidate(candidate: Path) -> dict[str, Any]:
     if any((candidate / relative).is_symlink() or not (candidate / relative).is_file() for relative in required_files):
         raise UpdateConflict("invalid_candidate", "Candidate is missing a required regular file")
     if any(
-        (candidate / relative).is_symlink() or not (candidate / relative).is_dir()
-        for relative in required_directories
+        (candidate / relative).is_symlink() or not (candidate / relative).is_dir() for relative in required_directories
     ):
         raise UpdateConflict("invalid_candidate", "Candidate is missing a required directory")
     identity = read_skill_identity(candidate)
@@ -498,10 +498,14 @@ def _checkout_state(
     if re.fullmatch(r"[A-Za-z0-9._/-]+", ref) and ref not in {"HEAD", branch, f"refs/heads/{branch}"}:
         raise UpdateConflict("branch_ref_mismatch", "Current branch does not match the requested ref")
     current_commit = _run_git("rev-parse", "HEAD", cwd=root).stdout.strip()
-    candidate_has_current = _run_git("cat-file", "-e", f"{current_commit}^{{commit}}", cwd=candidate_checkout, check=False)
+    candidate_has_current = _run_git(
+        "cat-file", "-e", f"{current_commit}^{{commit}}", cwd=candidate_checkout, check=False
+    )
     if candidate_has_current.returncode != 0:
         raise UpdateConflict("divergent_checkout", "Current checkout commit is absent from source history")
-    ancestor = _run_git("merge-base", "--is-ancestor", current_commit, candidate_commit, cwd=candidate_checkout, check=False)
+    ancestor = _run_git(
+        "merge-base", "--is-ancestor", current_commit, candidate_commit, cwd=candidate_checkout, check=False
+    )
     if ancestor.returncode != 0:
         raise UpdateConflict("divergent_checkout", "Git checkout cannot be updated by fast-forward")
     return {"branch": branch, "current_commit": current_commit, "remote": actual_remote}
@@ -709,9 +713,14 @@ def update_installation(
                 )
             )
 
-            if _semver_key(validation["version"]) < _semver_key(str(result["previous_version"])) and not allow_downgrade:
+            if (
+                _semver_key(validation["version"]) < _semver_key(str(result["previous_version"]))
+                and not allow_downgrade
+            ):
                 result["automatic_update_allowed"] = False
-                raise UpdateConflict("downgrade_refused", "Candidate version is older; use --allow-downgrade to proceed")
+                raise UpdateConflict(
+                    "downgrade_refused", "Candidate version is older; use --allow-downgrade to proceed"
+                )
             if apply and not canonical_upstream and validated_expected != resolved_commit.lower():
                 raise UpdateConflict(
                     "expected_commit_mismatch",
@@ -792,7 +801,9 @@ def update_installation(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check or safely update the exact active engineering-workflow installation.")
+    parser = argparse.ArgumentParser(
+        description="Check or safely update the exact active engineering-workflow installation."
+    )
     parser.add_argument("--install-path", required=True)
     parser.add_argument("--source-repo", default=CANONICAL_UPSTREAM)
     parser.add_argument("--source-path", default=CANONICAL_SOURCE_PATH)
