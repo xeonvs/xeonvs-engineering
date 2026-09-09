@@ -242,7 +242,9 @@ def render_versions(configured: list[Upstream], records: dict[str, dict]) -> Non
             fail(f'unsupported manifest description for README: {upstream.name}')
         source = f'[`{upstream.repository}`](https://github.com/{upstream.repository})'
         rows.append(f'| [`{upstream.name}`](plugins/{upstream.name}/) | {record["version"]} | {description} | {source} |')
-    generated = VERSION_BEGIN + '\n' + '\n'.join(rows) + '\n' + VERSION_END
+    header = '| Plugin | Version | Purpose | Canonical source |'
+    divider = '| --- | --- | --- | --- |'
+    generated = VERSION_BEGIN + '\n' + header + '\n' + divider + '\n' + '\n'.join(rows) + '\n' + VERSION_END
     README.write_text(before + generated + after, encoding='utf-8')
 
 

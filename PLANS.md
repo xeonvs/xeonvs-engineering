@@ -30,14 +30,15 @@
 | --- | --- | --- |
 | XM-01 | done | Initial public catalog repository exists. |
 | XM-02 | done | Codex/Claude catalogs, verified bundles, provenance, hygiene checks, and source-byte parity exist; stale `engineering-workflow` 0.8.2 import was corrected to 0.9.1. |
-| XM-03 | active | Finish self-review, pass protected hosted validation, merge, and publish immutable catalog release `v1.0.0`. |
+| XM-03 | active | PR #2 was reviewed, hosted CI passed, and signed immutable catalog release `v1.0.0` was published. Its immutable archive contains only accidental CI bytecode; publish `v1.0.1` with portable cache exclusions and a release-time archive assertion before installation. |
 | XM-04 | queued | Register the new catalog in Codex, install and discover `tgrep-search`, then remove only the superseded direct local skill. |
 | XM-05 | active | Add and validate the bounded sync workflow: detect eligible newer versioned packages, create or update one Draft PR, and never merge, tag, or publish automatically. |
 
 ## Completion
 
-Complete when `v1.0.0` is published, both catalogs resolve the current verified
-bundles, the sync workflow can produce one reviewable Draft PR for a newer
-versioned source package, and Codex has installed and discovered
+Complete when the current catalog release contains only intended source assets,
+both catalogs resolve the current verified bundles, the sync workflow can
+produce one reviewable Draft PR for a newer versioned source package, and Codex
+has installed and discovered
 `tgrep-search@xeonvs-engineering`. Only then may the legacy direct local skill
 be removed; no unrelated agent installation is changed.

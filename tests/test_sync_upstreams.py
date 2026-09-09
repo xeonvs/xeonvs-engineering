@@ -116,6 +116,20 @@ class SyncConfigurationTest(unittest.TestCase):
         finally:
             sync.README = original_readme
 
+    def test_render_versions_keeps_the_complete_table_inside_markers(self) -> None:
+        original_readme = sync.README
+        try:
+            with tempfile.TemporaryDirectory() as temporary:
+                sync.README = Path(temporary) / 'README.md'
+                sync.README.write_text(f'before\n{sync.VERSION_BEGIN}\nold\n{sync.VERSION_END}\nafter\n')
+                sync.render_versions([], {})
+                content = sync.README.read_text()
+                self.assertIn(f'{sync.VERSION_BEGIN}\n| Plugin | Version | Purpose | Canonical source |', content)
+                self.assertIn('| --- | --- | --- | --- |', content)
+                self.assertNotIn('\nold\n', content)
+        finally:
+            sync.README = original_readme
+
 
 if __name__ == '__main__':
     unittest.main()

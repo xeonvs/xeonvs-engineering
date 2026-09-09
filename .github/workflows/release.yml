@@ -24,7 +24,15 @@ jobs:
           mkdir dist
           tar --sort=name --mtime='UTC 2026-01-01' --owner=0 --group=0 --numeric-owner \
             --exclude=.git --exclude=dist \
+            --exclude='__pycache__' --exclude='*/__pycache__' \
+            --exclude='*.pyc' --exclude='*.pyo' \
+            --exclude='.pytest_cache' --exclude='*/.pytest_cache' \
             -czf dist/xeonvs-engineering-${GITHUB_REF_NAME}.tar.gz .
+          if tar -tzf dist/xeonvs-engineering-${GITHUB_REF_NAME}.tar.gz | \
+              grep -E '(^|/)(__pycache__/|.*\.(pyc|pyo)$|\.pytest_cache/)'; then
+            echo 'Generated Python cache files must not be published.' >&2
+            exit 1
+          fi
           sha256sum dist/xeonvs-engineering-${GITHUB_REF_NAME}.tar.gz > dist/SHA256SUMS
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
