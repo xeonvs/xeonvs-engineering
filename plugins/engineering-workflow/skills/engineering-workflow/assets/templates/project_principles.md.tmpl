@@ -1,0 +1,43 @@
+# Project Principles
+
+This file indexes stable, cross-cutting engineering principles. It does not duplicate the detailed planning contract or domain manuals.
+
+## Core Principles
+
+<!-- ew:invariant id="workflow.owner-boundaries" -->
+### Source Ownership
+
+Keep each active engineering invariant in one named source-of-truth document. Preserve unknown and domain-specific files until ownership evidence or a user decision resolves them; routers and indexes link owners rather than restating their rules.
+
+<!-- ew:invariant id="workflow.validation-boundary" -->
+### Validation Boundary
+
+Validate mechanically at the narrowest safe boundary and record exact results. A check protects behavior or structure; it must not require duplicated normative prose merely to pass.
+
+<!-- ew:invariant id="workflow.incident-to-guard" -->
+### Incident Learning
+
+Convert a recurring failure class into one canonical invariant, a reachable task route, and an executable guard. Keep the incident catalog descriptive and retire historical detail when it no longer improves prevention.
+
+<!-- ew:invariant id="workflow.efficient-execution" -->
+### Efficient Execution
+
+Preserve correctness, safety, explicit requirements, and required evidence before optimizing calls or output. Use bounded reconnaissance and focused inspection, but fully ingest sources needed for exact edits; prefer repository-native automation and avoid unrelated work.
+
+<!-- ew:invariant id="workflow.evidence-driven-completion" -->
+### Evidence-Driven Completion
+
+Define green from the task's required checks. Treat environmental and unrelated failures explicitly, change the hypothesis from relevant evidence, make the smallest supported correction, and stop after the required final state is proven.
+
+<!-- ew:invariant id="workflow.completion-driven-wait" -->
+### Completion-Driven Wait
+
+For long-running commands, follow the installed `engineering-workflow` completion-driven waiter and bounded-output contract. Keep full logs and required terminal results in private task-owned ignored artifacts, verify them independently of a possibly truncated waiter cell, and do not wake the model for periodic empty polls when the environment can wait for completion.
+
+## Owned References
+
+- Planning details: installed `engineering-workflow` skill, `references/planning_and_backlog.md`.
+- Instruction ownership and incident lifecycle: installed `engineering-workflow` skill, `references/instruction_lifecycle.md`.
+- Long-running execution and waiter integrity: installed `engineering-workflow` skill, `references/agent_orchestration.md`.
+- Validation and execution safety: installed `engineering-workflow` skill, `references/validation_safety.md`.
+- Repository-specific architecture, product, operations, QA, release, and security rules remain under their existing owners and should be added to the matching `AGENTS.md` route.

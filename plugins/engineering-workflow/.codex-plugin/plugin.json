@@ -1,0 +1,37 @@
+{
+  "name": "engineering-workflow",
+  "version": "0.8.2",
+  "description": "Audit, plan, migrate, validate, and maintain repository engineering workflows.",
+  "author": {
+    "name": "xeonvs",
+    "url": "https://github.com/xeonvs"
+  },
+  "homepage": "https://github.com/xeonvs/codex-engineering-workflow",
+  "repository": "https://github.com/xeonvs/codex-engineering-workflow",
+  "license": "MIT",
+  "keywords": [
+    "engineering",
+    "workflow",
+    "repository",
+    "planning",
+    "validation"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Engineering Workflow",
+    "shortDescription": "Plan and maintain repository workflows safely.",
+    "longDescription": "Audits, scaffolds, validates, updates, and conservatively migrates repository engineering-workflow layers.",
+    "developerName": "xeonvs",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/xeonvs/codex-engineering-workflow",
+    "defaultPrompt": [
+      "Audit this repository's engineering workflow.",
+      "Upgrade this repository's workflow safely."
+    ]
+  }
+}

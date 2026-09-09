@@ -1,0 +1,18 @@
+# Exec Plan Migration Note
+
+This note records the one-time migration from legacy plan locations to the current canonical layout.
+
+## Mapping
+
+| Old tracked file | New canonical location | Historical/detail location |
+| --- | --- | --- |
+| `{{ old_plan_path }}` | `{{ new_plan_path }}` | `{{ retained_path }}` |
+
+## Verification Rule
+
+- active, blocked, or recently completed execution work belongs in `PLANS.md`
+- future tracked work belongs in `docs/codex/TASKS_BACKLOG.md`
+- after compaction, interruption, resume, or milestone closure, plan and backlog status should be reconciled before code changes
+- active plan status should match post-commit truth before staging or committing
+- completed plan detail should be compacted, archived, or removed only after validation and handoff are recorded
+- retained historical plan trees are detail only, not canonical

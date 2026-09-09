@@ -1,0 +1,21 @@
+schema_version: 2
+skill_name: engineering-workflow
+skill_version: "{{ skill_version }}"
+applied_at: "{{ applied_at }}"
+mode: upgrade_target_workflow
+source_repo: "{{ source_repo }}"
+source_ref: "{{ source_ref }}"
+source_commit: "{{ source_commit }}"
+managed_paths:
+  - docs/codex/ENGINEERING_WORKFLOW_STATE.yaml
+shared_paths:
+  - AGENTS.md
+  - PLANS.md
+  - docs/engineering/project_principles.md
+  - docs/codex/TASKS_BACKLOG.md
+  - docs/codex/AGENT_EXECUTION_PITFALLS.md
+protected_paths: []
+runtime_agent_config_managed: false
+instruction_contract_version: 2
+planning_contract_version: 2
+orchestration_contract_version: 3
