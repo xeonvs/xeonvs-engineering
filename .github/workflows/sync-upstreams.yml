@@ -1,0 +1,77 @@
+name: Synchronize upstream plugins
+
+on:
+  workflow_dispatch:
+    inputs:
+      plugin:
+        description: Optional plugin to synchronize; leave empty for all
+        required: false
+        type: choice
+        default: all
+        options: [all, engineering-workflow, tgrep-search]
+  schedule:
+    - cron: '17 6 * * 1-5'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: marketplace-sync
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Prepare a candidate update
+        env:
+          SELECTED_PLUGIN: ${{ inputs.plugin || 'all' }}
+        run: |
+          if [ "$SELECTED_PLUGIN" = all ]; then
+            python scripts/sync_upstreams.py
+          else
+            python scripts/sync_upstreams.py --plugin "$SELECTED_PLUGIN"
+          fi
+          python scripts/validate_catalog.py
+          python -m unittest discover -s tests -v
+      - name: Create or update the one Draft review PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet; then
+            echo 'No eligible source version is newer than the catalog.'
+            exit 0
+          fi
+          branch=automation/marketplace-sync
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            expected_remote=$(git ls-remote --heads origin "$branch" | awk '{print $1}')
+          else
+            expected_remote=
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add plugins PROVENANCE.json README.md
+          git diff --cached --quiet && exit 1
+          git commit -m 'chore: synchronize released plugin bundles'
+          if [ -n "$expected_remote" ]; then
+            git push --force-with-lease="refs/heads/$branch:$expected_remote" \
+              origin "HEAD:refs/heads/$branch"
+          else
+            git push origin "HEAD:refs/heads/$branch"
+          fi
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state open --json number --jq '.[0].number')
+          if [ -z "$pr" ]; then
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" --draft \
+              --title 'chore: synchronize released plugin bundles' \
+              --body 'Automated, review-required marketplace synchronization. This PR contains byte-verified copies of newer versioned public upstream bundles plus their provenance updates. It never merges, tags, or publishes automatically.'
+          else
+            gh pr edit "$pr" --repo "$GITHUB_REPOSITORY" \
+              --body 'Automated, review-required marketplace synchronization. This PR contains byte-verified copies of newer versioned public upstream bundles plus their provenance updates. It never merges, tags, or publishes automatically.'
+          fi
