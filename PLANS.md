@@ -1,11 +1,11 @@
 # Execution Plans
 
-## Active Work
+## Completed Work
 
-### xeonvs-engineering 1.0.0 — initial unified marketplace
+### xeonvs-engineering 1.0.1 — initial unified marketplace
 
-- **Status:** active
-- **Release classification:** initial public marketplace release
+- **Status:** completed
+- **Release classification:** no-release closure (the artifact-bearing marketplace release is `v1.0.1`)
 - **Goal:** publish one portable marketplace named `xeonvs-engineering` with
   current versioned public packages `engineering-workflow` and `tgrep-search`;
   later package updates create a Dependabot-style, review-required Draft PR.
@@ -30,15 +30,12 @@
 | --- | --- | --- |
 | XM-01 | done | Initial public catalog repository exists. |
 | XM-02 | done | Codex/Claude catalogs, verified bundles, provenance, hygiene checks, and source-byte parity exist; stale `engineering-workflow` 0.8.2 import was corrected to 0.9.1. |
-| XM-03 | active | PR #2 was reviewed, hosted CI passed, and signed immutable catalog release `v1.0.0` was published. Its immutable archive contains only accidental CI bytecode; publish `v1.0.1` with portable cache exclusions and a release-time archive assertion before installation. |
-| XM-04 | queued | Register the new catalog in Codex, install and discover `tgrep-search`, then remove only the superseded direct local skill. |
-| XM-05 | active | Add and validate the bounded sync workflow: detect eligible newer versioned packages, create or update one Draft PR, and never merge, tag, or publish automatically. |
+| XM-03 | done | PR #2 was reviewed and hosted CI passed. PR #3 added portable cache exclusions and a release-time archive assertion; signed immutable catalog release [`v1.0.1`](https://github.com/xeonvs/xeonvs-engineering/releases/tag/v1.0.1) was published with a clean archive. |
+| XM-04 | done | Codex registered the catalog from `v1.0.1`, installed and discovered `tgrep-search@xeonvs-engineering` version `1.0.1`, and read it back enabled. The superseded direct local skill was then removed after the marketplace-managed installation was read back; no other agent installation changed. |
+| XM-05 | done | The bounded weekday/manual sync workflow is merged and validated. It detects eligible newer versioned packages and can create or refresh exactly one review-required Draft PR; it never merges, tags, publishes, or changes an installed skill. |
 
 ## Completion
 
-Complete when the current catalog release contains only intended source assets,
-both catalogs resolve the current verified bundles, the sync workflow can
-produce one reviewable Draft PR for a newer versioned source package, and Codex
-has installed and discovered
-`tgrep-search@xeonvs-engineering`. Only then may the legacy direct local skill
-be removed; no unrelated agent installation is changed.
+Completed on 2026-09-09. Marketplace release [`v1.0.1`](https://github.com/xeonvs/xeonvs-engineering/releases/tag/v1.0.1) contains only intended source assets and checksummed bundles; both catalogs resolve the current verified packages. The sync workflow remains review-only and can produce one Draft PR for a newer eligible source package. Codex has installed and discovered enabled `tgrep-search@xeonvs-engineering` `1.0.1`; the superseded direct local skill is removed after managed-install readback, and no unrelated agent installation changed.
+
+This is a documentation and closure record only. It changes no shipped plugin bundle, provenance, or marketplace artifact contract, so it does not create a new marketplace release.
