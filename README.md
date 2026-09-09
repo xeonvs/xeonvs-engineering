@@ -7,9 +7,9 @@ reviewed local bundle held in this repository.
 
 ## Available plugins
 
+<!-- BEGIN GENERATED PLUGIN VERSIONS -->
 | Plugin | Version | Purpose | Canonical source |
 | --- | --- | --- | --- |
-<!-- BEGIN GENERATED PLUGIN VERSIONS -->
 | [`engineering-workflow`](plugins/engineering-workflow/) | 0.9.1 | Audit, plan, migrate, validate, and maintain repository engineering workflows. | [`xeonvs/codex-engineering-workflow`](https://github.com/xeonvs/codex-engineering-workflow) |
 | [`tgrep-search`](plugins/tgrep-search/) | 1.0.1 | Search local source trees efficiently with the tgrep trigram index. | [`xeonvs/tgrep-search`](https://github.com/xeonvs/tgrep-search) |
 <!-- END GENERATED PLUGIN VERSIONS -->
@@ -19,17 +19,18 @@ reviewed local bundle held in this repository.
 ```bash
 # Codex
 codex plugin marketplace add xeonvs/xeonvs-engineering
+codex plugin add engineering-workflow@xeonvs-engineering
 codex plugin add tgrep-search@xeonvs-engineering
 
 # Claude Code
 claude plugin marketplace add xeonvs/xeonvs-engineering
+claude plugin install engineering-workflow@xeonvs-engineering
 claude plugin install tgrep-search@xeonvs-engineering
 ```
 
-Install `engineering-workflow@xeonvs-engineering` in the same way when its
-repository-workflow guidance is needed. Existing direct installations of
-`engineering-workflow` remain supported; this marketplace does not replace or
-restructure its mature source repository.
+Both packages are optional and may be installed independently. Existing direct
+installations of `engineering-workflow` remain supported; this marketplace does
+not replace or restructure its mature source repository.
 
 OpenCode and other agents that use standard skill folders can consume the
 canonical skill directory from an upstream repository or the matching bundle in
