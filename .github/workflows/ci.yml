@@ -21,6 +21,7 @@ jobs:
           ref: d83fd005fda4dd6efdfe167c478b0dd500a77eda
           path: .sources/engineering-workflow
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: xeonvs/tgrep-search
