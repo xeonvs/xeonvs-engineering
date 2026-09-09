@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "plugins": [
+    {
+      "name": "engineering-workflow",
+      "repository": "xeonvs/codex-engineering-workflow",
+      "bundle_path": "plugins/engineering-workflow",
+      "source_policy": "latest-tag"
+    },
+    {
+      "name": "tgrep-search",
+      "repository": "xeonvs/tgrep-search",
+      "bundle_path": "plugins/tgrep-search",
+      "source_policy": "latest-tag"
+    }
+  ]
+}
