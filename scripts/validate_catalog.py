@@ -83,13 +83,13 @@ def public_hygiene() -> None:
             fail(f'forbidden public-content pattern: {relative}')
 
 
-def git_head(path: Path) -> str:
+def git_revision(path: Path, revision: str) -> str:
     result = subprocess.run(
-        ['git', '-C', str(path), 'rev-parse', 'HEAD'],
+        ['git', '-C', str(path), 'rev-parse', revision],
         text=True, capture_output=True, check=False,
     )
     if result.returncode:
-        fail(f'cannot read source revision for {path}: {result.stderr.strip()}')
+        fail(f'cannot resolve source revision {revision!r} for {path}: {result.stderr.strip()}')
     return result.stdout.strip()
 
 
@@ -147,8 +147,10 @@ def validate_catalog(sources: dict[str, Path]) -> None:
 
         source = sources.get(name)
         if source is not None:
-            if git_head(source) != item.get('source_commit'):
-                fail(f'source revision drift: {name}')
+            if git_revision(source, 'HEAD') != item.get('source_commit'):
+                fail(f'source checkout revision drift: {name}')
+            if git_revision(source, f"{item['source_tag']}^{{}}") != item.get('source_commit'):
+                fail(f'source tag does not resolve to recorded commit: {name}')
             if tree_digest(source / item['source_path']) != tree_digest(bundle):
                 fail(f'source bundle bytes differ: {name}')
     public_hygiene()
