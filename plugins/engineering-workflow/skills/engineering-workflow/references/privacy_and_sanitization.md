@@ -64,6 +64,14 @@ Do not ban every old version string. Historical versions are valid in completed 
 
 Enforce current-version consistency only for active sources such as `SKILL.md`, README's current-version declaration, current update prompts, active state manifests, and active installation checks.
 
+## Pre-Push Secret Gate
+
+Before every authorized push, scan the final public tree and every ref that the push can make reachable. Use a dedicated secret scanner when available, enable full redaction before execution, and keep raw reports only in a permission-restricted task-owned ignored temporary location. A successful earlier scan is stale after any material edit, commit rewrite, merge, generated-file rebuild, staging change, or ref movement; rescan the changed scope before pushing.
+
+Any finding blocks the push. Keep the candidate value out of agent context and classify it from value-free rule, path, line, commit/ref, and fixture-provenance metadata. For a real credential, revoke or rotate it first, remove the source occurrence, and scan the tree and affected history again. A synthetic fixture or false positive must be proven through repository-owned provenance or the exact review contract; it is not a reason to weaken the scanner globally.
+
+Do not rewrite history automatically. A confirmed secret in reachable history requires explicit user authorization, recovery refs, the bounded procedure below, object-ID-pinned `force-with-lease`, and successful post-rewrite tree/history scans. Until all required scans are green, do not push any repository changes.
+
 ## History Scan And Rewrite
 
 When a user authorizes historical remediation:

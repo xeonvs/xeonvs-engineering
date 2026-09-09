@@ -9,7 +9,7 @@ The workflow layer uses one clear owner per concern and does not absorb reposito
 - `docs/engineering/project_principles.md`: durable cross-cutting engineering rules and ownership boundaries
 - `docs/codex/TASKS_BACKLOG.md`: future or inactive work with activation and exit criteria
 - `docs/codex/AGENT_EXECUTION_PITFALLS.md`: non-normative incident classes, causes, owner/route/guard links, evidence, and retirement
-- `docs/codex/ENGINEERING_WORKFLOW_STATE.yaml`: explicit migration/version/ownership state for listed paths only
+- `docs/codex/ENGINEERING_WORKFLOW_STATE.yaml`: explicit migration/version/ownership state for listed paths only, including the optional plan-archive graph and atomic active-plan state owned by `planning_and_backlog.md`
 - managed navigation indexes: `docs/README.md`, `docs/codex/README.md`, `docs/engineering/README.md`, and lazily created archive indexes
 
 ## Optional Files

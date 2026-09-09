@@ -13,7 +13,6 @@ import tempfile
 from pathlib import Path
 from typing import Iterable
 
-
 PLAN_SCHEMA_VERSION = 2
 PLAN_ORIGINS = {
     "plan_mode_approved",
@@ -308,10 +307,7 @@ def scan_privacy_text_with_fingerprints(text: str) -> list[dict[str, int | str]]
 
 def scan_privacy_text(text: str) -> list[dict[str, int | str]]:
     """Return categories and line numbers without echoing values or fingerprints."""
-    return [
-        {"type": issue["type"], "line": issue["line"]}
-        for issue in scan_privacy_text_with_fingerprints(text)
-    ]
+    return [{"type": issue["type"], "line": issue["line"]} for issue in scan_privacy_text_with_fingerprints(text)]
 
 
 def scan_public_tree_with_fingerprints(root: Path) -> list[dict[str, int | str]]:
@@ -341,7 +337,7 @@ def _classify_text_language(text: str) -> str:
     for ch in text:
         if "A" <= ch <= "Z" or "a" <= ch <= "z":
             latin += 1
-        elif "\u0400" <= ch <= "\u04FF":
+        elif "\u0400" <= ch <= "\u04ff":
             cyrillic += 1
     if latin == 0 and cyrillic == 0:
         return "unknown"
@@ -370,6 +366,76 @@ def _normalize_managed_path(raw: str) -> str | None:
     if any(part in {"", ".", ".."} for part in parts):
         return None
     return Path(*parts).as_posix()
+
+
+def _parse_manifest_atom(raw: str, *, allow_null: bool = False) -> str | None:
+    value = raw.strip()
+    if allow_null and value.lower() in {"null", "~"}:
+        return None
+    if value.startswith('"'):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise ValueError("invalid quoted manifest value") from exc
+        if not isinstance(parsed, str):
+            raise ValueError("manifest path value must be a string")
+        return parsed
+    if value.startswith("'") and value.endswith("'") and len(value) >= 2:
+        return value[1:-1].replace("''", "'")
+    if not re.fullmatch(r"[A-Za-z0-9_./-]+", value):
+        raise ValueError("unsupported manifest path value")
+    return value
+
+
+def parse_manifest_path_scalar(text: str, key: str, *, allow_null: bool = False) -> tuple[bool, str | None]:
+    matches = list(re.finditer(rf"(?m)^{re.escape(key)}:[ \t]*(?P<value>[^#\n]*?)[ \t]*(?:#.*)?$", text))
+    if not matches:
+        return False, None
+    if len(matches) != 1:
+        raise ValueError(f"{key} must be declared exactly once")
+    match = matches[0]
+    raw = match.group("value").strip()
+    if not raw:
+        raise ValueError(f"{key} must be a scalar path")
+    parsed = _parse_manifest_atom(raw, allow_null=allow_null)
+    if parsed is None:
+        return True, None
+    normalized = _normalize_managed_path(parsed)
+    if normalized is None:
+        raise ValueError(f"{key} must be a safe repository-relative path")
+    return True, normalized
+
+
+def parse_manifest_path_list(text: str, key: str) -> tuple[bool, list[str]]:
+    matches = list(re.finditer(rf"(?m)^{re.escape(key)}:[ \t]*(?P<inline>[^#\n]*?)[ \t]*(?:#.*)?$", text))
+    if not matches:
+        return False, []
+    if len(matches) != 1:
+        raise ValueError(f"{key} must be declared exactly once")
+    match = matches[0]
+    inline = match.group("inline").strip()
+    if inline:
+        if inline == "[]":
+            return True, []
+        raise ValueError(f"{key} must use a block list")
+    values: list[str] = []
+    start = match.end()
+    for raw_line in text[start:].splitlines():
+        if raw_line and not raw_line.startswith((" ", "\t")):
+            break
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if not stripped.startswith("-"):
+            raise ValueError(f"{key} contains a non-list value")
+        parsed = _parse_manifest_atom(stripped[1:].strip())
+        if parsed is None:
+            raise ValueError(f"{key} entries must be paths")
+        normalized = _normalize_managed_path(parsed)
+        if normalized is None:
+            raise ValueError(f"{key} entries must be safe repository-relative paths")
+        values.append(normalized)
+    return True, values
 
 
 def load_managed_paths(root: Path) -> set[str]:
@@ -453,10 +519,15 @@ def discover_workflow_artifacts(root: Path, relevant_files: list[Path] | None = 
     artifacts: list[dict[str, str]] = []
     for path in files:
         rel = path.relative_to(root).as_posix()
-        if path.suffix.lower() not in DOC_SUFFIXES and rel not in {
-            STATE_MANIFEST_PATH,
-            ".codex/config.toml",
-        } and not rel.startswith(".codex/agents/"):
+        if (
+            path.suffix.lower() not in DOC_SUFFIXES
+            and rel
+            not in {
+                STATE_MANIFEST_PATH,
+                ".codex/config.toml",
+            }
+            and not rel.startswith(".codex/agents/")
+        ):
             continue
         classification = classify_workflow_artifact(root, path, managed_paths)
         artifacts.append(
@@ -617,7 +688,9 @@ def _has_unsafe_find_action(tokens: list[str]) -> bool:
 
 
 def _sed_writes_or_executes(tokens: list[str]) -> bool:
-    if any(token == "--in-place" or token.startswith("--in-place=") or re.fullmatch(r"-i.*", token) for token in tokens[1:]):
+    if any(
+        token == "--in-place" or token.startswith("--in-place=") or re.fullmatch(r"-i.*", token) for token in tokens[1:]
+    ):
         return True
     scripts: list[str] = []
     skip_next = False
@@ -677,9 +750,14 @@ def _names_or_presence_only(executable: str, tokens: list[str]) -> bool:
     if executable in {"ls", "stat", "readlink", "test", "wc"}:
         return True
     if executable == "rg":
-        return any(token in {"--files", "-l", "--files-with-matches", "-L", "--files-without-match"} for token in tokens[1:])
+        return any(
+            token in {"--files", "-l", "--files-with-matches", "-L", "--files-without-match"} for token in tokens[1:]
+        )
     if executable == "grep":
-        return any(token in {"-l", "--files-with-matches", "-L", "--files-without-match", "-q", "--quiet", "--silent"} for token in tokens[1:])
+        return any(
+            token in {"-l", "--files-with-matches", "-L", "--files-without-match", "-q", "--quiet", "--silent"}
+            for token in tokens[1:]
+        )
     return False
 
 
@@ -709,7 +787,11 @@ def classify_command_risks(command: str) -> dict[str, object]:
 
     executable = Path(tokens[0]).name.lower()
     sensitive_path = any(_SENSITIVE_PATH_RE.search(token) for token in tokens[1:])
-    if sensitive_path and executable in _CONTENT_READING_EXECUTABLES and not _names_or_presence_only(executable, tokens):
+    if (
+        sensitive_path
+        and executable in _CONTENT_READING_EXECUTABLES
+        and not _names_or_presence_only(executable, tokens)
+    ):
         result["sensitive_output"] = True
         result["reasons"] = ["sensitive_path_content"]
         return result
@@ -779,7 +861,19 @@ def classify_command_risks(command: str) -> dict[str, object]:
         return result
     if executable in _COPY_ONLY_EXECUTABLES:
         result["repo_code_execution"] = True
-        result["network"] = executable in {"npm", "npx", "pnpm", "yarn", "bun", "pip", "pip3", "poetry", "uv", "cargo", "go"}
+        result["network"] = executable in {
+            "npm",
+            "npx",
+            "pnpm",
+            "yarn",
+            "bun",
+            "pip",
+            "pip3",
+            "poetry",
+            "uv",
+            "cargo",
+            "go",
+        }
         result["classification"] = "copy_only_safe"
         return result
     result["reasons"] = ["unsupported_command"]
@@ -798,8 +892,7 @@ def recommended_checks(root: Path) -> dict[str, list[str]]:
     if (root / "Makefile").exists():
         copy_only.append("make help")
     if any(path.suffix == ".py" for path in relevant_files) or any(
-        (root / name).exists()
-        for name in ("pyproject.toml", "requirements.txt", "requirements-dev.txt")
+        (root / name).exists() for name in ("pyproject.toml", "requirements.txt", "requirements-dev.txt")
     ):
         copy_only.append("python -m compileall .")
     if (root / "package.json").exists():
@@ -912,15 +1005,17 @@ def run_in_disposable_copy(repo: Path, commands: list[str], timeout_seconds: int
             descriptor = public_command_descriptor(command, index)
             safety = classify_command_safety(command)
             if safety != "copy_only_safe":
-                results.append(
-                    {**descriptor, "status": "rejected", "reason": f"expected copy_only_safe, got {safety}"}
-                )
+                results.append({**descriptor, "status": "rejected", "reason": f"expected copy_only_safe, got {safety}"})
                 continue
             tokens = shlex.split(command)
             executable = Path(tokens[0]).name.lower()
             if executable in {"pip", "pip3", "npm", "npx", "pnpm", "yarn", "bun", "cargo", "go"}:
                 results.append(
-                    {**descriptor, "status": "rejected", "reason": "network-capable package command requires an explicit offline wrapper"}
+                    {
+                        **descriptor,
+                        "status": "rejected",
+                        "reason": "network-capable package command requires an explicit offline wrapper",
+                    }
                 )
                 continue
             isolated_compileall = _intrinsically_offline(tokens)

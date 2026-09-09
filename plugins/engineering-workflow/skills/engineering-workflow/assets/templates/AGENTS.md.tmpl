@@ -1,8 +1,8 @@
 # Agent Instructions
 
-instruction_contract_version: 2
+instruction_contract_version: 3
 
-Use this file as a short route map, not as a project manual. Read the matched owners before changing the routed path and run the named guards before closure.
+Use this file as a short route map, not as a project manual. Read the matched owners before changing the routed path and run the named guards before closure. All matching routes apply, including the general repository-change route for specialized changes.
 
 ## Repo Map
 
@@ -20,14 +20,17 @@ Use this file as a short route map, not as a project manual. Read the matched ow
 
 ## Task Routes
 
-<!-- ew:route id="planning" triggers="PLANS.md|docs/codex/TASKS_BACKLOG.md|docs/archive/**" owners="skill://engineering-workflow/references/planning_and_backlog.md" guards="lint:plan-lifecycle" -->
-| `planning` | plan, backlog, closure, or archive | installed planning reference | `lint:plan-lifecycle` |
+<!-- ew:route id="execution-context" triggers="**" owners="skill://engineering-workflow/references/platform_compatibility.md|skill://engineering-workflow/references/question_matrix.md|skill://engineering-workflow/references/agent_orchestration.md" guards="manual_review:verify native host behavior scope authorization task continuity and handoff" -->
+| `execution-context` | every task, including clarification, steering, delegation, and handoff | platform reference first, then question policy and platform-selected shared orchestration sections | scope and host-capability review |
+
+<!-- ew:route id="planning" triggers="PLANS.md|docs/codex/TASKS_BACKLOG.md|docs/archive/**|workflow-state plan archive|plan closure" owners="skill://engineering-workflow/references/planning_and_backlog.md" guards="lint:plan-lifecycle" -->
+| `planning` | plan, backlog, closure, or default/custom workflow-state archive | installed planning reference | `lint:plan-lifecycle` |
 
 <!-- ew:route id="workflow-instructions" triggers="AGENTS.md|docs/engineering/**|docs/codex/AGENT_EXECUTION_PITFALLS.md" owners="skill://engineering-workflow/references/instruction_lifecycle.md|docs/engineering/project_principles.md" guards="lint:instruction-contract" -->
 | `workflow-instructions` | instruction owner, route, or incident change | instruction lifecycle and project principles | `lint:instruction-contract` |
 
 <!-- ew:route id="repository-change" triggers="**" owners="docs/engineering/project_principles.md" guards="manual_review:run repository gates mapped by the owner" -->
-| `repository-change` | any repository-changing work not matched above | project principles and its domain-owner links | repository-specific gates |
+| `repository-change` | every repository-changing task, alongside specialized routes | project principles and its domain-owner links | repository-specific gates |
 
 <!-- ew:route id="long-running-execution" triggers="long-running commands|builds|tests|local processes|polling|terminal sessions" owners="docs/engineering/project_principles.md" guards="manual_review:verify completion evidence deadline bounded output and task-owned cleanup" -->
 | `long-running-execution` | long-running local command, waiter, polling, or process cleanup | project principles and installed orchestration contract | completion-evidence review |

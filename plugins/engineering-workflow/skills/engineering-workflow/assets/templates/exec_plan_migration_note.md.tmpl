@@ -8,11 +8,10 @@ This note records the one-time migration from legacy plan locations to the curre
 | --- | --- | --- |
 | `{{ old_plan_path }}` | `{{ new_plan_path }}` | `{{ retained_path }}` |
 
-## Verification Rule
+## Verification Evidence
 
-- active, blocked, or recently completed execution work belongs in `PLANS.md`
-- future tracked work belongs in `docs/codex/TASKS_BACKLOG.md`
-- after compaction, interruption, resume, or milestone closure, plan and backlog status should be reconciled before code changes
-- active plan status should match post-commit truth before staging or committing
-- completed plan detail should be compacted, archived, or removed only after validation and handoff are recorded
-- retained historical plan trees are detail only, not canonical
+- <migration date, checked mappings, retained-history decision, and exact validation results>
+
+## Current Policy Owners
+
+This note records historical migration evidence and does not define active workflow rules. Current planning, reconciliation, closure, and backlog policy lives in the installed `engineering-workflow` reference `references/planning_and_backlog.md`; instruction ownership lives in `references/instruction_lifecycle.md`.

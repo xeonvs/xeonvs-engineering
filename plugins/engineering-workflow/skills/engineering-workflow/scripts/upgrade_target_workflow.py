@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-from collections import Counter
 import difflib
 import hashlib
 import hmac
@@ -13,6 +12,7 @@ import stat
 import subprocess
 import tomllib
 import uuid
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +25,8 @@ from common import (
     STATE_MANIFEST_PATH,
     audit_repo,
     find_stale_completed_state,
+    parse_manifest_path_list,
+    parse_manifest_path_scalar,
     scan_privacy_text,
     scan_public_tree_with_fingerprints,
     validate_plan_schema,
@@ -35,10 +37,10 @@ from plan_lifecycle import (
     INDEX_START,
     LifecycleError,
     check_archive_indexes,
+    check_plan_lifecycle,
     closure_issues,
     planned_index_writes,
 )
-
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "templates"
@@ -53,16 +55,27 @@ TARGET_VERSION_RE = re.compile(
 )
 LEGACY_PRISTINE_HASHES = {
     "AGENTS.md": {
+        "a8d95f1fa60b6d1e5e2adebf26003bae3cfeb1528f375e4b2579adc25ad58024",
+        "8677f495bb2c8017d3cd4e76ab87e5a4390a3d4e8d2127b8c8450c92f1fbc5b7",
+        "ab74ed6dfce15e498efe3a55e8282b9b7e02e0e4aab43853dfb3caa51d567001",
+        "8a13b033b75df46fa8a008528a6351d5a47c79dbc6d97db15f34ceca60aeaa03",
+        "a278e6ba650f8f78b7379ab72a0f6d5c10bfedea672aed6c9e1b017c05d886da",
         "c27a53d5105daae7e45ffb078d6441f19ee4285600a0fed9df776656f13bbb12",
         "6382547ce3e2d80a07aadf5dad93dba89dbdf8ab986a14674d49f802bc857037",
         "93dc99b298ff407c9e2d33b6fc1070fbdcb0d1073f4ec8726f6713409524c3a1",
         "67da11f6ca4e95c17aa057dc4d2a52b777b6a006186d001196efcdcf44476350",
         "c1f4ce431c370b1a272f56801553113ddedbc5caa2ad958468751ec8b3fa0925",
         "9ce8b3222996e2f81c66b1223ff75b1167e2a80371847107ea62806654d8d207",
+        "e44b438b46b27a75c769bbd3b65c8f75531119babeb4f03a8118a3296a23ef88",
+        "783b9e342105ec7618fbd0a75baaa7c60800d8066d1cc9125ec20542428d507f",
+        "80fef49bbb670fe41ab055df4a286db1e5264a46d2a9513f6c229e18f3e8e93b",
+        "cc1e93e5ecf382d71c16212fcb7b94dacb604616e716f6d4d476c112e0392070",
     },
     CANONICAL_FILES["principles"]: {
+        "c37b57e9c654e36c5e4269b0e9f43b736d25ba11b9894d4784c24a95c9fe47fe",
         "cb72c47c3d9d7165eaeedfcded0d222a1d558ec90440887bf8569862b307b5aa",
         "9c54b3d5b7cddee93c9de05e75035f0750527bc0e86fe985b2cda95ede9ceb9f",
+        "3aecc1a616fd3e9fca15febef9199e001548d3c40e6c256bef706a37a59f8d78",
     },
     CANONICAL_FILES["pitfalls"]: {
         "87fc6d71cfef930f8198b7846628b86232e9131e966a52b49aa3f73d6b0f07c3",
@@ -136,12 +149,8 @@ def _evaluate_privacy_review(
     approved_token: str | None,
 ) -> tuple[dict[str, Any], list[dict[str, int | str]], Counter[PrivacyFingerprint]]:
     detailed = scan_public_tree_with_fingerprints(root)
-    eligible = [
-        finding for finding in detailed if finding["type"] in PRIVACY_REVIEW_ELIGIBLE_TYPES
-    ]
-    hard = [
-        finding for finding in detailed if finding["type"] not in PRIVACY_REVIEW_ELIGIBLE_TYPES
-    ]
+    eligible = [finding for finding in detailed if finding["type"] in PRIVACY_REVIEW_ELIGIBLE_TYPES]
+    hard = [finding for finding in detailed if finding["type"] not in PRIVACY_REVIEW_ELIGIBLE_TYPES]
     candidates = [_public_privacy_finding(finding) for finding in eligible]
     empty: Counter[PrivacyFingerprint] = Counter()
     if not detailed:
@@ -530,29 +539,33 @@ def _existing_active_conflict(plans_text: str) -> str | None:
         title = section.group("title").strip()
         if title.startswith("Engineering Workflow Upgrade"):
             continue
-        status = re.search(r"(?m)^Status:\s*(planned|in_progress|active|blocked|ready_for_closure)\s*$", section.group("body"))
+        status = re.search(
+            r"(?m)^Status:\s*(planned|in_progress|active|blocked|ready_for_closure)\s*$", section.group("body")
+        )
         if status:
             return f"Unrelated active plan must remain owned by its current task: {title}"
     return None
 
 
-def _scan_contract_conflicts(root: Path) -> list[dict[str, str]]:
+def _scan_contract_conflicts(root: Path, include_agent_config: bool = False) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     patterns = (
         ("compressed_plan_rule", re.compile(r"\b(?:lightweight|compact|short)\s+(?:active\s+)?plan\b", re.IGNORECASE)),
         ("compact_queue_rule", re.compile(r"\bcompact(?:\s+checked)?\s+queue(?:\s+item)?\b", re.IGNORECASE)),
-        ("repo_change_without_plan", re.compile(r"\b(?:small|minor|quick)\s+changes?\b.{0,80}\b(?:without|no)\s+(?:a\s+)?plan\b", re.IGNORECASE)),
+        (
+            "repo_change_without_plan",
+            re.compile(r"\b(?:small|minor|quick)\s+changes?\b.{0,80}\b(?:without|no)\s+(?:a\s+)?plan\b", re.IGNORECASE),
+        ),
     )
     canonical_mutation_paths = {
         "PLANS.md",
         "AGENTS.md",
         *CANONICAL_FILES.values(),
         STATE_MANIFEST_PATH,
-        ".codex/config.toml",
     }
-    canonical_mutation_paths.update(
-        f".codex/agents/{name}.toml" for name in ("utility", "explorer", "reviewer")
-    )
+    if include_agent_config:
+        canonical_mutation_paths.add(".codex/config.toml")
+        canonical_mutation_paths.update(f".codex/agents/{name}.toml" for name in ("utility", "explorer", "reviewer"))
     reported_symlinks = set()
     for relative in sorted(canonical_mutation_paths):
         symlink_component = _first_symlink_component(root, relative)
@@ -566,7 +579,7 @@ def _scan_contract_conflicts(root: Path) -> list[dict[str, str]]:
                 }
             )
     agents_dir = root / ".codex" / "agents"
-    if agents_dir.is_dir() and not _first_symlink_component(root, ".codex/agents"):
+    if include_agent_config and agents_dir.is_dir() and not _first_symlink_component(root, ".codex/agents"):
         for path in agents_dir.glob("*.toml"):
             if path.is_symlink():
                 findings.append(
@@ -604,7 +617,7 @@ def _scan_contract_conflicts(root: Path) -> list[dict[str, str]]:
             findings.append({"type": "unrelated_active_plan", "path": "PLANS.md", "detail": conflict})
 
     config = root / ".codex" / "config.toml"
-    if config.exists() and not _first_symlink_component(root, ".codex/config.toml"):
+    if include_agent_config and config.exists() and not _first_symlink_component(root, ".codex/config.toml"):
         text = _read(config)
         try:
             data = tomllib.loads(text)
@@ -616,7 +629,12 @@ def _scan_contract_conflicts(root: Path) -> list[dict[str, str]]:
                 findings.append({"type": "conflicting_max_depth", "path": ".codex/config.toml"})
             if isinstance(agents, dict) and isinstance(agents.get("max_depth"), int) and agents.get("max_depth", 0) > 1:
                 findings.append({"type": "recursive_delegation", "path": ".codex/config.toml"})
-            if "agents" in data and isinstance(agents, dict) and agents.get("max_depth") is None and not re.search(r"(?m)^\[agents\][ \t]*(?:#.*)?$", text):
+            if (
+                "agents" in data
+                and isinstance(agents, dict)
+                and agents.get("max_depth") is None
+                and not re.search(r"(?m)^\[agents\][ \t]*(?:#.*)?$", text)
+            ):
                 findings.append({"type": "unsupported_inline_agents", "path": ".codex/config.toml"})
     return findings
 
@@ -663,7 +681,9 @@ def _proposed_changes(root: Path, include_agent_config: bool) -> list[dict[str, 
         if not _present(root / relative):
             changes.append({"path": relative, "action": "create", "reason": "missing canonical shared workflow file"})
         elif _is_pristine_legacy(relative, _read(root / relative)):
-            changes.append({"path": relative, "action": "update", "reason": "known pristine legacy template fingerprint"})
+            changes.append(
+                {"path": relative, "action": "update", "reason": "known pristine legacy template fingerprint"}
+            )
     index_dirs = ["docs", "docs/codex", "docs/engineering"]
     if (root / "docs/archive").exists():
         index_dirs.append("docs/archive")
@@ -680,17 +700,27 @@ def _proposed_changes(root: Path, include_agent_config: bool) -> list[dict[str, 
                 "reason": "maintain navigation-only managed index",
             }
         )
-    changes.append({
-        "path": STATE_MANIFEST_PATH,
-        "action": "update" if _present(root / STATE_MANIFEST_PATH) else "create",
-        "reason": "record exact managed, shared, and protected paths",
-    })
+    changes.append(
+        {
+            "path": STATE_MANIFEST_PATH,
+            "action": "update" if _present(root / STATE_MANIFEST_PATH) else "create",
+            "reason": "record exact managed, shared, and protected paths",
+        }
+    )
     if include_agent_config:
-        changes.append({"path": ".codex/config.toml", "action": "structural_merge", "reason": "explicit runtime agent configuration request"})
+        changes.append(
+            {
+                "path": ".codex/config.toml",
+                "action": "structural_merge",
+                "reason": "explicit runtime agent configuration request",
+            }
+        )
         for name in ("utility", "explorer", "reviewer"):
             path = f".codex/agents/{name}.toml"
             if not _present(root / path):
-                changes.append({"path": path, "action": "create", "reason": "explicit optional agent configuration request"})
+                changes.append(
+                    {"path": path, "action": "create", "reason": "explicit optional agent configuration request"}
+                )
     return changes
 
 
@@ -705,7 +735,20 @@ def build_migration_report(
     if not root.is_dir():
         raise MigrationConflict("missing_repository", "Target repository does not exist")
     audit = audit_repo(root)
-    conflicts = _scan_contract_conflicts(root)
+    conflicts = _scan_contract_conflicts(root, include_agent_config=include_agent_config)
+    state_text = _read(root / STATE_MANIFEST_PATH)
+    if state_text and not _first_symlink_component(root, STATE_MANIFEST_PATH):
+        try:
+            _manifest_archive_contract(state_text)
+        except MigrationConflict as exc:
+            conflicts.append(
+                {
+                    "type": exc.code,
+                    "path": STATE_MANIFEST_PATH,
+                    "requires_decision": "true",
+                    "detail": str(exc),
+                }
+            )
     instruction_contract = audit["instruction_contract"]
     if not instruction_contract["success"]:
         existing_instruction_paths = [
@@ -727,7 +770,14 @@ def build_migration_report(
             if instruction_contract["status"] == "instruction_conflict":
                 finding["requires_decision"] = "true"
             conflicts.append(finding)
-    for relative_dir in ("docs", "docs/codex", "docs/engineering", "docs/archive", "docs/archive/plans", "docs/archive/backlog"):
+    for relative_dir in (
+        "docs",
+        "docs/codex",
+        "docs/engineering",
+        "docs/archive",
+        "docs/archive/plans",
+        "docs/archive/backlog",
+    ):
         readme = root / relative_dir / "README.md"
         if readme.is_file():
             text = _read(readme)
@@ -761,9 +811,17 @@ def build_migration_report(
         elif finding["type"] == "canonical_symlink":
             questions.append(f"Should the canonical symlink at {finding['path']} be retained, retargeted, or replaced?")
         elif finding["type"] == "instruction_conflict":
-            questions.append(f"Which canonical owners and routes should replace the customized instruction contract in {finding['path']}?")
+            questions.append(
+                f"Which canonical owners and routes should replace the customized instruction contract in {finding['path']}?"
+            )
         elif finding["type"] == "index_migration_required":
-            questions.append(f"Where may the managed navigation block be inserted in {finding['path']} without replacing repository-owned prose?")
+            questions.append(
+                f"Where may the managed navigation block be inserted in {finding['path']} without replacing repository-owned prose?"
+            )
+        elif finding["type"] in {"ambiguous_archive_ownership", "invalid_archive_ownership"}:
+            questions.append(
+                "Which complete plan archive path, ordered managed index graph, and active-plan state should own lifecycle closure?"
+            )
         elif finding.get("requires_decision") == "true":
             questions.append(f"Which source should own the contradictory planning rule in {finding['path']}?")
     proposed = _proposed_changes(root, include_agent_config)
@@ -782,7 +840,9 @@ def build_migration_report(
         approved_privacy_review,
     )
     return {
-        "success": not any(item["type"] in blocking_types or item.get("requires_decision") == "true" for item in conflicts),
+        "success": not any(
+            item["type"] in blocking_types or item.get("requires_decision") == "true" for item in conflicts
+        ),
         "mode": "plan",
         "repository": ".",
         "target_version": target_version,
@@ -814,12 +874,16 @@ def build_migration_report(
     }
 
 
-def _migration_plan(target_version: str, include_agent_config: bool, *, done: bool = False, result: str = "Not run yet.") -> str:
+def _migration_plan(
+    target_version: str, include_agent_config: bool, *, done: bool = False, result: str = "Not run yet."
+) -> str:
     status = "ready_for_closure" if done else "active"
     checkbox = "x" if done else " "
     req_status = "done" if done else "in_progress"
     today = datetime.now(timezone.utc).date().isoformat()
-    resume = "No unfinished migration queue item remains." if done else "Start with WQ-02, the first unfinished queue item."
+    resume = (
+        "No unfinished migration queue item remains." if done else "Start with WQ-02, the first unfinished queue item."
+    )
     return f"""{PLAN_MARKER_START}
 ## Active Plan: Engineering Workflow Upgrade {target_version}
 
@@ -847,7 +911,7 @@ direct_execution
 | --- | --- | --- | --- | --- | --- |
 | REQ-001 | Full migration plan is the first target write. | engineering-workflow contract | WQ-01 | Plan schema validates. | done |
 | REQ-002 | Workflow-owned structure and manifest reach {target_version} without modifying protected docs. | migration report | WQ-02 | Protected snapshots agree and manifest parses. | {req_status} |
-| REQ-003 | Runtime agent configuration follows the explicit selection. | user invocation | WQ-03 | Config is {'structurally merged' if include_agent_config else 'untouched'}. | {req_status} |
+| REQ-003 | Runtime agent configuration follows the explicit selection. | user invocation | WQ-03 | Config is {"structurally merged" if include_agent_config else "untouched"}. | {req_status} |
 
 ### Explicit Non-Goals
 
@@ -864,7 +928,7 @@ direct_execution
 
 ### User Decisions And Answers
 
-- Runtime agent configuration requested: {'yes' if include_agent_config else 'no'}.
+- Runtime agent configuration requested: {"yes" if include_agent_config else "no"}.
 
 ### Completed Baseline State
 
@@ -904,12 +968,12 @@ direct_execution
 
 ### Reconciliation Check
 
-- [{'x' if done else ' '}] Requirements, queue, validation, working tree, manifest, and statuses agree; completed text has no stale next-work state.
+- [{"x" if done else " "}] Requirements, queue, validation, working tree, manifest, and statuses agree; completed text has no stale next-work state.
 
 ### Closure Gate
 
-- [{'x' if done else ' '}] Every requirement and queue item is terminal, validation is current, and no promoted backlog or index state is stale.
-- [{'x' if done else ' '}] Resume Point contains no unfinished in-scope work and compact closure can be applied atomically.
+- [{"x" if done else " "}] Every requirement and queue item is terminal, validation is current, and no promoted backlog or index state is stale.
+- [{"x" if done else " "}] Resume Point contains no unfinished in-scope work and compact closure can be applied atomically.
 
 ### Post-Close Delivery
 
@@ -917,20 +981,23 @@ direct_execution
 
 ### Handoff Notes
 
-- {'Migration complete; no unfinished in-scope work remains.' if done else 'Continue only from the first unfinished queue item after reconciling target state.'}
+- {"Migration complete; no unfinished in-scope work remains." if done else "Continue only from the first unfinished queue item after reconciling target state."}
 {PLAN_MARKER_END}
 """
 
 
 def _put_plan_first(existing: str, plan: str) -> str:
     if PLAN_MARKER_START in existing and PLAN_MARKER_END in existing:
-        return re.sub(
-            re.escape(PLAN_MARKER_START) + r".*?" + re.escape(PLAN_MARKER_END),
-            plan.strip(),
-            existing,
-            count=1,
-            flags=re.DOTALL,
-        ).rstrip() + "\n"
+        return (
+            re.sub(
+                re.escape(PLAN_MARKER_START) + r".*?" + re.escape(PLAN_MARKER_END),
+                plan.strip(),
+                existing,
+                count=1,
+                flags=re.DOTALL,
+            ).rstrip()
+            + "\n"
+        )
     if not existing.strip():
         return "# Execution Plans\n\n" + plan
     lines = existing.splitlines(keepends=True)
@@ -984,7 +1051,9 @@ def _merge_codex_config(text: str) -> tuple[str, str]:
         return text, ""
     header = re.search(r"(?m)^\[agents\][ \t]*(?:#.*)?$", text)
     if "agents" in parsed and isinstance(agents, dict) and header is None:
-        raise MigrationConflict("unsupported_inline_agents", "Inline or dotted agents configuration requires an explicit migration decision")
+        raise MigrationConflict(
+            "unsupported_inline_agents", "Inline or dotted agents configuration requires an explicit migration decision"
+        )
     if header:
         updated = text[: header.end()] + "\nmax_depth = 1" + text[header.end() :]
     else:
@@ -1006,12 +1075,42 @@ def _yaml_quote(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def _manifest_archive_contract(existing: str) -> tuple[str, list[str]]:
+    default_path = "docs/archive/plans"
+    default_indexes = [
+        "docs/archive/plans/README.md",
+        "docs/archive/README.md",
+        "docs/README.md",
+    ]
+    if not existing:
+        return default_path, default_indexes
+    try:
+        path_present, archive_path = parse_manifest_path_scalar(existing, "plan_archive_path")
+        indexes_present, archive_indexes = parse_manifest_path_list(existing, "plan_archive_indexes")
+        active_present, _ = parse_manifest_path_scalar(existing, "active_plan", allow_null=True)
+    except ValueError as exc:
+        raise MigrationConflict("invalid_archive_ownership", str(exc)) from exc
+    fields = (path_present, indexes_present, active_present)
+    if not any(fields):
+        return default_path, default_indexes
+    if not all(fields) or archive_path is None or not archive_indexes:
+        raise MigrationConflict(
+            "ambiguous_archive_ownership",
+            "Existing archive ownership must declare plan_archive_path, plan_archive_indexes, and active_plan together",
+        )
+    if len(set(archive_indexes)) != len(archive_indexes):
+        raise MigrationConflict("ambiguous_archive_ownership", "Existing plan_archive_indexes contains duplicates")
+    return archive_path, archive_indexes
+
+
 def _manifest_text(
     target_version: str,
     protected_paths: list[str],
     shared_paths: list[str],
     include_agent_config: bool,
+    existing_manifest: str = "",
 ) -> str:
+    archive_path, archive_indexes = _manifest_archive_contract(existing_manifest)
     applied = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     lines = [
         "schema_version: 2",
@@ -1024,8 +1123,9 @@ def _manifest_text(
         f"source_commit: {_yaml_quote(_source_commit())}",
         "managed_paths:",
         f"  - {STATE_MANIFEST_PATH}",
-        "shared_paths:",
     ]
+    lines.extend(f"  - {_yaml_quote(path)}" for path in archive_indexes)
+    lines.append("shared_paths:")
     lines.extend(f"  - {_yaml_quote(path)}" for path in sorted(shared_paths))
     lines.append("protected_paths:")
     lines.extend(f"  - {_yaml_quote(path)}" for path in sorted(protected_paths))
@@ -1033,8 +1133,16 @@ def _manifest_text(
         lines[-1] = "protected_paths: []"
     lines.extend(
         [
+            f"plan_archive_path: {_yaml_quote(archive_path)}",
+            "plan_archive_indexes:",
+        ]
+    )
+    lines.extend(f"  - {_yaml_quote(path)}" for path in archive_indexes)
+    lines.extend(
+        [
+            'active_plan: "PLANS.md"',
             f"runtime_agent_config_managed: {'true' if include_agent_config else 'false'}",
-            "instruction_contract_version: 2",
+            "instruction_contract_version: 3",
             "planning_contract_version: 2",
             "orchestration_contract_version: 3",
         ]
@@ -1194,6 +1302,7 @@ def apply_migration(
                 report["protected_paths"],
                 sorted(set(shared_paths)),
                 include_agent_config,
+                read(STATE_MANIFEST_PATH),
             )
             if scan_privacy_text(manifest):
                 raise MigrationConflict("unsafe_manifest", "Generated manifest contains private data")
@@ -1218,7 +1327,28 @@ def apply_migration(
             final_plan_issues.extend(closure_issues(read("PLANS.md"), require_ready=True))
             if final_plan_issues:
                 raise MigrationConflict("invalid_generated_plan", "; ".join(final_plan_issues))
+            lifecycle_result = check_plan_lifecycle(root)
+            if not lifecycle_result["success"]:
+                raise MigrationConflict(
+                    "invalid_generated_lifecycle",
+                    json.dumps(lifecycle_result["errors"], sort_keys=True),
+                )
             write("PLANS.md", _close_migration_plan(read("PLANS.md"), target_version))
+            closed_manifest, active_count = re.subn(
+                r"(?m)^active_plan:\s*[^#\n]*?(?:\s+#.*)?$",
+                "active_plan: null",
+                read(STATE_MANIFEST_PATH),
+                count=1,
+            )
+            if active_count != 1:
+                raise MigrationConflict("invalid_archive_ownership", "Generated manifest has no active_plan state")
+            write(STATE_MANIFEST_PATH, closed_manifest.rstrip() + "\n")
+            closed_lifecycle = check_plan_lifecycle(root)
+            if not closed_lifecycle["success"]:
+                raise MigrationConflict(
+                    "invalid_closed_lifecycle",
+                    json.dumps(closed_lifecycle["errors"], sort_keys=True),
+                )
 
             secure.assert_identity()
             final_privacy_findings = _new_privacy_findings(root, approved_fingerprints)
@@ -1341,11 +1471,7 @@ def execute_prompt_upgrade(
             "success": False,
             "mode": "prompt",
             "update_status": "privacy_review_required",
-            "agent_action": (
-                "request_privacy_review_approval"
-                if approval_required
-                else "report_privacy_findings"
-            ),
+            "agent_action": ("request_privacy_review_approval" if approval_required else "report_privacy_findings"),
             "report_reviewed": True,
             "mutation_log": [],
         }
@@ -1360,10 +1486,7 @@ def execute_prompt_upgrade(
         non_instruction_blockers.update({"conflicting_max_depth", "unsupported_inline_agents"})
     instruction_review_only = not any(
         finding["type"] in non_instruction_blockers
-        or (
-            finding.get("requires_decision") == "true"
-            and finding["type"] not in reviewable_instruction_types
-        )
+        or (finding.get("requires_decision") == "true" and finding["type"] not in reviewable_instruction_types)
         for finding in report["conflicts"]
     )
     if (
@@ -1422,13 +1545,15 @@ def execute_prompt_upgrade(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Plan, apply, or prompt-orchestrate a conservative workflow migration.")
+    parser = argparse.ArgumentParser(
+        description="Plan, apply, or prompt-orchestrate a conservative workflow migration."
+    )
     parser.add_argument("--repo", required=True)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.8.2")
+    parser.add_argument("--target-version", default="0.9.1")
     parser.add_argument("--include-agent-config", action="store_true")
     parser.add_argument(
         "--approve-privacy-review",

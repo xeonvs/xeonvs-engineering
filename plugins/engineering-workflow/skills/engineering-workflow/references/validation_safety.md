@@ -12,6 +12,14 @@ Probe the runtime, tools, packages, and services required by the intended checks
 
 Define green from the task's named commands and required output conditions. On failure, inspect the relevant evidence, update the hypothesis, make the smallest supported correction, and rerun the affected check. A missing dependency, environmental error, or known unrelated failure is not green; repair it only when authorized and in scope, otherwise report it separately. When the required checks pass and no task-relevant blocker remains, stop instead of adding optional refactors or redundant successful runs.
 
+Add tests for observable behavior or meaningful invariants. Do not add tests for reversible low-impact changes merely to mirror their implementation or wording. After required checks pass, broaden or repeat verification only for a new change, failure, or unresolved concern. Instruction-following quality requires realistic scenario review; phrase-presence assertions alone do not prove it. These proportionality rules do not waive a repository's required gates or semantic review boundaries.
+
+## Review Boundaries
+
+Treat automated green and semantic review as distinct evidence. Before each logical commit, review the complete intended commit slice against its requirements, ownership boundaries, safety constraints, tests, and unrelated-diff risk; correct every material finding and rerun the affected checks before committing. A logical commit may cover several tightly coupled queue items, but an incomplete implementation fragment is not a valid review boundary.
+
+Before final staging or delivery, review the aggregate change set again, including interactions between individually reviewed slices, generated/source parity, durable plan state, and the exact files that will be committed. Do not claim the final review from a partial diff, truncated output, delegated summary, or an earlier review followed by material edits.
+
 ## Modes
 
 ### `read_only_verify`
