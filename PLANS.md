@@ -27,8 +27,8 @@
 | ID | State | Work and acceptance evidence |
 | --- | --- | --- |
 | XM-01 | done | Initial public repository exists with a minimal catalog-only boundary. |
-| XM-02 | active | Add a Draft PR plan, two fixed released bundles, Codex and Claude catalogs, provenance, documentation, and offline validation. Hosted CI fetches source-tag refs before tag-to-commit provenance verification. |
-| XM-03 | queued | Self-review the complete range, pass protected hosted validation, merge, and publish immutable catalog release `v1.0.0`. |
+| XM-02 | done | Added two fixed released bundles, Codex and Claude catalogs, provenance, documentation, offline validation, and hosted source-tag-to-commit/byte verification. |
+| XM-03 | active | Self-review the complete range, pass protected hosted validation, merge, and publish immutable catalog release `v1.0.0`. |
 | XM-04 | queued | Register the new catalog in Codex, install and discover `tgrep-search`, then remove only the superseded direct local skill. |
 
 ## Completion
