@@ -1,0 +1,23 @@
+{
+  "name": "xeonvs-engineering",
+  "owner": {
+    "name": "xeonvs"
+  },
+  "description": "Public engineering plugins maintained by xeonvs.",
+  "plugins": [
+    {
+      "name": "engineering-workflow",
+      "source": "./plugins/engineering-workflow",
+      "description": "Audit, plan, migrate, validate, and maintain repository engineering workflows.",
+      "category": "Developer Tools",
+      "homepage": "https://github.com/xeonvs/codex-engineering-workflow"
+    },
+    {
+      "name": "tgrep-search",
+      "source": "./plugins/tgrep-search",
+      "description": "Search local source trees efficiently with the tgrep trigram index.",
+      "category": "Developer Tools",
+      "homepage": "https://github.com/xeonvs/tgrep-search"
+    }
+  ]
+}

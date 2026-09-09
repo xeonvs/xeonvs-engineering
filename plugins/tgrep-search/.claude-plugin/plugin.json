@@ -1,0 +1,10 @@
+{
+  "name": "tgrep-search",
+  "version": "1.0.1",
+  "description": "Search local source trees efficiently with the tgrep trigram index.",
+  "author": {"name": "xeonvs", "url": "https://github.com/xeonvs"},
+  "homepage": "https://github.com/xeonvs/tgrep-search",
+  "repository": "https://github.com/xeonvs/tgrep-search",
+  "license": "MIT",
+  "keywords": ["search", "code-search", "trigram", "repository", "developer-tools"]
+}

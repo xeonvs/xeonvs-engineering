@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "catalog_version": "1.0.0",
+  "bundles": [
+    {
+      "name": "engineering-workflow",
+      "version": "0.8.2",
+      "source_repository": "https://github.com/xeonvs/codex-engineering-workflow",
+      "source_tag": "v0.8.2",
+      "source_commit": "d83fd005fda4dd6efdfe167c478b0dd500a77eda",
+      "source_path": "plugins/engineering-workflow",
+      "bundle_sha256": "48b060f774a069184c945d1fb0d474513eada118ba3d85cd6aa0201030654545"
+    },
+    {
+      "name": "tgrep-search",
+      "version": "1.0.1",
+      "source_repository": "https://github.com/xeonvs/tgrep-search",
+      "source_tag": "v1.0.1",
+      "source_commit": "e316614144d14efb7bdf63f49ff820a12bdedc84",
+      "source_path": "plugins/tgrep-search",
+      "bundle_sha256": "88e3d6563e950ac9c25ac7b48d0bb790cc02c6a79034abe9b2cb5194aa7bca7a"
+    }
+  ]
+}

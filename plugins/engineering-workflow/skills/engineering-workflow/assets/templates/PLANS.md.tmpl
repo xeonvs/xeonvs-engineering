@@ -1,0 +1,119 @@
+# Execution Plans
+
+plan_schema_version: 2
+
+Use a full active plan for every repository-changing task. Read-only work is exempt. The canonical lifecycle contract is the installed `engineering-workflow` reference `references/planning_and_backlog.md`.
+
+## Active Plan: <short task title>
+
+Status: active
+Owner: root
+Last Updated: YYYY-MM-DD
+
+### Goal
+
+Describe the verified end state.
+
+### Plan Origin
+
+direct_execution
+
+Allowed values: `plan_mode_approved`, `direct_execution`, `resumed`, `backlog_promotion`, `external_handoff`.
+
+### Requested Scope
+
+- Preserve every requested outcome until closure or an explicit superseding decision.
+
+### Requirement Traceability
+
+| Requirement | Complete outcome | Source | Work queue | Acceptance or validation | Status |
+| --- | --- | --- | --- | --- | --- |
+| REQ-001 | <complete outcome> | user prompt | WQ-01 | <observable acceptance criterion> | pending |
+
+### Explicit Non-Goals
+
+- <item outside the requested outcome and why>
+
+### Constraints
+
+- <hard rule or approval boundary>
+
+### Inputs And Sources
+
+- User request: <durable summary or attachment reference>
+- External source: <URL or `none declared`>
+
+### User Decisions And Answers
+
+- <decision, answer, date, and source, or `none yet`>
+
+### Completed Baseline State
+
+- [x] WQ-00 — <verified fact that should not be rediscovered>
+
+### Current Work Queue
+
+- [ ] WQ-01 — Implement and validate REQ-001. `pending`
+
+Each queue item must be ordered, independently checkable, and mapped to every requirement it covers.
+
+### Locked Decisions
+
+- <decision, rationale, and date>
+
+### Verification
+
+- REQ-001 / WQ-01: <command, test, review, or observable acceptance criterion>.
+
+### Latest Validation Results
+
+- Not run yet.
+
+### Risks And Recovery
+
+- Risk: <failure mode>. Recovery: <bounded rollback or recovery action>.
+
+### Resume Point
+
+- Start with WQ-01, the first unfinished queue item.
+
+### Plan Fidelity Check
+
+- [ ] Every agreed outcome has a requirement ID.
+- [ ] Every source URL is preserved.
+- [ ] Every user answer and locked decision is preserved.
+- [ ] No requirement was silently narrowed or removed.
+- [ ] The queue covers every requirement ID.
+- [ ] Validation covers every acceptance criterion.
+- [ ] Non-goals do not contradict requested scope.
+- [ ] The resume point names the first unfinished queue item.
+- [ ] This plan is not a compressed rewrite of a more detailed approved plan.
+
+Implementation must not begin or continue while this check fails.
+
+### Reconciliation Check
+
+- [ ] Plan status, requirement statuses, first unfinished queue item, resume point, backlog promotion, latest validation, working tree, indexes, and related workflow docs agree.
+- [ ] Completed sections contain no stale next-work, resume, current-milestone, active-blocker, or open-status wording.
+
+### Closure Gate
+
+- [ ] Every in-scope requirement and queue item is terminal.
+- [ ] Applicable validation is current for the final content.
+- [ ] Review feedback, omissions, backlog, and indexes are reconciled.
+- [ ] Resume Point contains no future in-scope work.
+- [ ] Compact or archive disposition can be applied atomically.
+
+### Post-Close Delivery
+
+- <commit, push, CI, or release work that is completed, explicitly out of scope, or handled after closure without appearing as unfinished implementation work>
+
+### Handoff Notes
+
+- <remaining risk, external follow-up, or `none`>
+
+## Recently Completed
+
+- [x] YYYY-MM-DD: <durable outcome and validation result>.
+
+Keep at most ten entries by default. Archive only future-useful rationale or explicitly retained history. A still-relevant follow-up belongs in an unfinished requirement, backlog item, external issue, or explicit post-close delivery boundary—not stale completed-state prose.

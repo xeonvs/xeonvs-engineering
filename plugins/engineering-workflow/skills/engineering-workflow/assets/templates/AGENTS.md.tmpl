@@ -1,0 +1,37 @@
+# Agent Instructions
+
+instruction_contract_version: 2
+
+Use this file as a short route map, not as a project manual. Read the matched owners before changing the routed path and run the named guards before closure.
+
+## Repo Map
+
+- `{{ entrypoint_hint }}`
+- `{{ subsystem_hint }}`
+- `tests/` — regression and contract checks
+
+## Workflow Sources Of Truth
+
+- `PLANS.md` — full active plans and durable recent outcomes; follow plan schema version 2 from the installed `engineering-workflow` planning reference.
+- `docs/codex/TASKS_BACKLOG.md` — inactive future work.
+- `docs/engineering/project_principles.md` — stable cross-cutting rules and ownership boundaries.
+- `docs/codex/AGENT_EXECUTION_PITFALLS.md` — non-normative incident classes and evidence links.
+- `docs/codex/ENGINEERING_WORKFLOW_STATE.yaml` — workflow ownership and applied-version record.
+
+## Task Routes
+
+<!-- ew:route id="planning" triggers="PLANS.md|docs/codex/TASKS_BACKLOG.md|docs/archive/**" owners="skill://engineering-workflow/references/planning_and_backlog.md" guards="lint:plan-lifecycle" -->
+| `planning` | plan, backlog, closure, or archive | installed planning reference | `lint:plan-lifecycle` |
+
+<!-- ew:route id="workflow-instructions" triggers="AGENTS.md|docs/engineering/**|docs/codex/AGENT_EXECUTION_PITFALLS.md" owners="skill://engineering-workflow/references/instruction_lifecycle.md|docs/engineering/project_principles.md" guards="lint:instruction-contract" -->
+| `workflow-instructions` | instruction owner, route, or incident change | instruction lifecycle and project principles | `lint:instruction-contract` |
+
+<!-- ew:route id="repository-change" triggers="**" owners="docs/engineering/project_principles.md" guards="manual_review:run repository gates mapped by the owner" -->
+| `repository-change` | any repository-changing work not matched above | project principles and its domain-owner links | repository-specific gates |
+
+<!-- ew:route id="long-running-execution" triggers="long-running commands|builds|tests|local processes|polling|terminal sessions" owners="docs/engineering/project_principles.md" guards="manual_review:verify completion evidence deadline bounded output and task-owned cleanup" -->
+| `long-running-execution` | long-running local command, waiter, polling, or process cleanup | project principles and installed orchestration contract | completion-evidence review |
+
+## Route Maintenance
+
+Add a route when a domain owner cannot otherwise be discovered from the changed path. Keep normative requirements in the owner and keep incident history in the catalog.

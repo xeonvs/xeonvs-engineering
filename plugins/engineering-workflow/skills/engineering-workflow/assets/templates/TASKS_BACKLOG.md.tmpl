@@ -1,0 +1,33 @@
+# Tasks Backlog
+
+This file tracks follow-up work that is not active right now. Use `PLANS.md` for active, blocked, or recently completed execution.
+
+When work starts, promote or link the item into `PLANS.md` before implementation. Keep detailed execution checklists out of the backlog.
+After promoted work closes, remove the backlog item by default once useful information lives in `PLANS.md`, canonical docs, an archive note, or an external tracker.
+Mark backlog items `done` only when the record remains useful. Archive only when future-useful rationale, external tracker mapping, repeated deferral history, or explicit retention requirements justify it.
+After context compaction, interruption, resume, or milestone closure, reconcile backlog status with `PLANS.md` before code changes.
+
+## Backlog Item: <title>
+
+Status: planned | parked | blocked | promoted | done
+Priority: low | medium | high
+
+### Activation Trigger
+- Condition that makes this work worth starting.
+
+### Goal
+One paragraph describing the intended end state.
+
+### Next Safe Action
+1. First bounded step.
+
+### Exit Criteria
+- Clear done conditions.
+
+### Promotion Notes
+- If promoted, link or name the matching `PLANS.md` active plan.
+
+### Cleanup Notes
+- Remove this item if it has no activation trigger, no next safe action, or only repeats completed work.
+- If closed, choose one: remove by default; mark `done` only for a useful audit trail; archive under `docs/archive/backlog/YYYY-MM-DD-<slug>.md` only for future-useful rationale or explicit retention.
+- Do not leave stale next safe action or milestone status text in a `done` item unless it links to explicit follow-up work.

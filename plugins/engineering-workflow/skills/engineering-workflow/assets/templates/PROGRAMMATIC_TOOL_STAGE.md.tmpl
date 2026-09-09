@@ -1,0 +1,30 @@
+<tool_orchestration>
+Stage: {{ stage_id }}
+
+Use Programmatic Tool Calling only for this bounded, non-side-effecting stage.
+Eligible tools: {{ eligible_tools }}
+Maximum tool calls: {{ max_calls }}
+Maximum concurrent calls: {{ max_concurrency }}
+Run calls concurrently only when they are independent.
+
+Use only documented tool inputs and result fields. Process and reduce intermediate
+results, then emit exactly one JSON object matching this result schema:
+{{ result_schema }}
+
+The completed payload must preserve these evidence fields: {{ evidence_fields }}
+Stop when: {{ stop_condition }}
+Retry transient failures at most {{ retry_limit }} time(s).
+
+For `completed`, set `data` to the schema-valid payload, copy every declared
+evidence field into `evidence`, and leave `missing` and `errors` empty. For
+`failed`, set `data` to null, preserve in `evidence` only declared fields whose
+values were successfully validated, and return bounded missing field names and
+sanitized error categories. Never invent missing evidence or echo sensitive tool
+values.
+
+Do not repeat completed calls, expand scope, spawn agents, write shared state, or
+perform side effects. Preserve partial failures in the structured result. Return
+control to the root model after this stage.
+
+Use direct model-guided calls for: {{ direct_handoff }}
+</tool_orchestration>
