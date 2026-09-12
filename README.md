@@ -1,5 +1,9 @@
 # Xeonvs Engineering Marketplace
 
+<p align="center">
+  <img src="assets/logo.svg" alt="Xeonvs Engineering" width="160">
+</p>
+
 A public, curated marketplace of independently versioned engineering plugins
 maintained by [xeonvs](https://github.com/xeonvs). It is a portable catalog for
 Codex and Claude Code: each catalog entry points to the same self-contained,
