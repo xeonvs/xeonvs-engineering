@@ -17,6 +17,27 @@ SPEC.loader.exec_module(sync)
 
 
 class SyncConfigurationTest(unittest.TestCase):
+    def test_workflow_actions_are_immutable_node24_revisions(self) -> None:
+        workflows = {
+            path.name: path.read_text()
+            for path in sorted((ROOT / '.github/workflows').glob('*.yml'))
+        }
+        setup_python = 'actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1'
+        release_action = 'softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64'
+
+        for name in ('ci.yml', 'release.yml', 'sync-upstreams.yml'):
+            self.assertIn(setup_python, workflows[name])
+        self.assertIn(release_action, workflows['release.yml'])
+        combined = '\n'.join(workflows.values())
+        self.assertNotIn(
+            'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065',
+            combined,
+        )
+        self.assertNotIn(
+            'softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65',
+            combined,
+        )
+
     def test_sync_workflow_authenticates_git_without_persisting_checkout_credentials(self) -> None:
         workflow = (ROOT / '.github/workflows/sync-upstreams.yml').read_text()
         setup = workflow.index('gh auth setup-git --hostname github.com')
