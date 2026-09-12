@@ -2,7 +2,7 @@
 name: engineering-workflow
 description: Audit, scaffold, verify, update, or migrate a repository engineering workflow while preserving existing document ownership, user scope, validation safety, and durable execution state. Use for AGENTS/PLANS/backlog/pitfalls setup, workflow upgrades, workflow-structure verification, and prompts such as Refresh Loaded Skill, Update Installed Skill, or Upgrade A Target Workflow.
 metadata:
-  version: 0.9.3
+  version: 0.9.4
 ---
 
 # Engineering Workflow

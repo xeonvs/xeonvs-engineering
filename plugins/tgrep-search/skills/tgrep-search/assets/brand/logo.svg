@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">tgrep Search</title>
+  <desc id="desc">A filled search lens scans three indexed lines and highlights an exact match.</desc>
+  <rect width="1024" height="1024" fill="#101828"/>
+  <path d="M638 622l174 174" fill="none" stroke="#3972F6" stroke-width="112" stroke-linecap="round"/>
+  <circle cx="444" cy="430" r="258" fill="#67E8F9"/>
+  <rect x="300" y="316" width="238" height="54" rx="27" fill="#101828"/>
+  <rect x="300" y="403" width="292" height="54" rx="27" fill="#101828"/>
+  <rect x="300" y="490" width="214" height="54" rx="27" fill="#101828"/>
+  <rect x="566" y="306" width="74" height="74" rx="14" fill="#F59E0B"/>
+</svg>

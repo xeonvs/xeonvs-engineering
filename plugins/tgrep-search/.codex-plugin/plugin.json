@@ -1,6 +1,6 @@
 {
   "name": "tgrep-search",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Search local source trees efficiently with the tgrep trigram index.",
   "author": {"name": "xeonvs", "url": "https://github.com/xeonvs"},
   "homepage": "https://github.com/xeonvs/tgrep-search",
@@ -16,6 +16,10 @@
     "category": "Developer Tools",
     "capabilities": ["Interactive", "Read"],
     "websiteURL": "https://github.com/xeonvs/tgrep-search",
-    "defaultPrompt": ["Use tgrep to find the implementation and tests for this behavior."]
+    "defaultPrompt": ["Use tgrep to find the implementation and tests for this behavior."],
+    "brandColor": "#67E8F9",
+    "composerIcon": "./skills/tgrep-search/assets/brand/composer-icon.png",
+    "logo": "./skills/tgrep-search/assets/brand/logo.png",
+    "logoDark": "./skills/tgrep-search/assets/brand/logo-dark.png"
   }
 }
