@@ -20,12 +20,13 @@ Stable contract markers:
 2. Materialization Gates
 3. Requirement And Queue State
 4. Full Active Plan Schema
-5. Resume And Milestone Reconciliation
-6. Closure State Machine
-7. Compact And Archive Dispositions
-8. Index Policy
-9. Backlog Lifecycle
-10. Failure And Recovery
+5. Current Operational State
+6. Continuity And Recovery Reconciliation
+7. Closure State Machine
+8. Compact And Archive Dispositions
+9. Index Policy
+10. Backlog Lifecycle
+11. Failure And Recovery
 
 ## Planning Boundary
 
@@ -55,6 +56,16 @@ Requirement and queue status is one of `pending`, `in_progress`, `blocked`, `don
 
 The first non-terminal queue item is the current item. The Resume Point names it and its next safe action. A blocked plan records the condition, owner, attempted recovery, and next safe diagnostic action.
 
+## Current Operational State
+
+Maintain mutable operational sections as part of useful work, not through a separate periodic plan-maintenance loop. When a verified fact changes a requirement, decision, queue item, blocker, evidence boundary, recovery step, or resume prerequisite, update the affected existing section before a dependent action and before an explicit handoff. Do not postpone critical state in expectation of a guaranteed warning before automatic compaction or failure. Batch closely related changes from one semantic stage into one local plan edit when that remains safe. If nothing material changed, do not rewrite the plan, touch `Last Updated`, add a record that everything is still aligned, or run a semantic sweep merely to look for possibly stale lines.
+
+A new verified fact supersedes an older statement only for the same subject and applicable scope, content, and environment. Recency does not increase authority or resolve a contradiction by itself. Preserve requirements, constraints, user and locked decisions with necessary rationale, useful negative findings, current queue and blockers, applicable validation evidence and provenance, recovery, and the exact resume point.
+
+After exploration, retain the conclusion and the evidence or rationale needed to use, review, or recover it; do not preserve every discarded hypothesis or the whole tool trajectory unless that history is itself required evidence. Keep historical evidence historical rather than rewriting it as current state, and do not create another mandatory archive for history that has no continuing decision, recovery, or audit value. Update a changed fact in its existing owner instead of copying it into a second operational history. Reuse requirement and queue identifiers and links instead of restating the same result in several long sections.
+
+Native memory, session summaries, and task lists do not replace the current full active plan or verified evidence. They also do not require a mirror or comparison entry after every step. This is not permission to disable native memory, ignore applicable host instructions, or remove user-owned history; preserve those facilities without turning them into another required workflow-state loop.
+
 ## Full Active Plan Schema
 
 Every active repository-changing plan contains:
@@ -82,11 +93,17 @@ Every active repository-changing plan contains:
 
 The plan must allow another agent to resume without reconstructing scope or decisions from chat or memory.
 
-## Resume And Milestone Reconciliation
+## Continuity And Recovery Reconciliation
 
 The fidelity check confirms complete requirements, sources, decisions, queue coverage, validation coverage, compatible non-goals, and an exact resume point. Implementation stops while any fidelity condition is unchecked.
 
-After context compaction, interruption, resume, a new Codex session, milestone closure, subagent handoff, or another handoff, read `PLANS.md`, inspect the working tree, and reconcile plan status, requirements, queue, backlog, validation, indexes, current milestone, and first safe action before code changes.
+During continuous work by the same root with the current task context available, an ordinary milestone or subagent return requires reconciling the result and only the affected requirements, queue, validation, risks, and resume state. The event alone does not require rereading the entire plan, backlog, indexes, instruction owners, and evidence, or repeating the repository audit. A subagent return does not transfer task or plan ownership to a new root.
+
+After actual context compaction that lost material task context, an interruption with uncertain outcome, a new session, or handoff to another root, read the current full active plan and obtain sufficient fresh observations of the repository and relevant environment before changing code. Recover the current state and first safe action; do not reconstruct the complete chat trajectory or repeat closed research by default. Long-lived chat or global memory alone does not prove that the current task context is intact.
+
+Changed requirements, material repository or external drift, concurrent edits, unavailable context, or an operation with uncertain terminal state expands reconciliation only as needed to resolve that uncertainty. An unchanged `HEAD` does not prove dirty content or an external system is unchanged. Verify terminal evidence before retrying and never repeat a side-effecting action blindly.
+
+The complete initial Plan Fidelity Check remains required. It is not reset after every step: recheck affected conditions when their requirements, decisions, queue mapping, validation basis, risks, or resume basis change, and check the complete final state again at truthful closure.
 
 Completed sections must not retain stale next-work, resume, current-milestone, active-blocker, or open-status wording. Represent real remaining work as a non-terminal requirement, backlog item, external issue, or explicit Post-Close Delivery boundary.
 
@@ -101,7 +118,7 @@ The valid path is:
 `ready_for_closure` requires:
 
 - all in-scope requirements and queue items are `done` or justified `out_of_scope`;
-- current validation evidence exists for the final content;
+- applicable validation evidence exists for the final content under `validation_safety.md`; an evidence date is provenance, not a proxy for the version of every checked input;
 - Plan Fidelity, Reconciliation, and Closure Gate contain no unchecked conditions;
 - omissions, review feedback, backlog, and index state agree;
 - Resume Point says no unfinished in-scope work;

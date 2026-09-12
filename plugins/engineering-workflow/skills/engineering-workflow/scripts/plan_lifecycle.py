@@ -222,8 +222,8 @@ def closure_issues(text: str, *, require_ready: bool = False, archived: bool = F
         validation_dates = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", validation)
         if not updated_match:
             issues.append("Last Updated must be an ISO date before closure")
-        elif not validation_dates or max(validation_dates) < updated_match.group(1):
-            issues.append("final validation predates the last content update")
+        if not validation_dates:
+            issues.append("final validation evidence must include an ISO date")
     for section in ("Plan Fidelity Check", "Reconciliation Check", "Closure Gate"):
         body = _section_text(text, section)
         if (require_ready or status in {"ready_for_closure", "done"}) and re.search(r"(?m)^\s*-\s*\[ \]", body):
@@ -776,22 +776,42 @@ def _slugify(value: str) -> str:
 
 
 def _compact_root(existing: str, title: str, archive_path: str | None) -> str:
-    completed_match = re.search(r"(?ms)^## Recently Completed\s*$\n(?P<body>.*)\Z", existing)
-    old_entries = []
-    if completed_match:
-        old_entries = [
-            line for line in completed_match.group("body").splitlines() if re.match(r"^- \[x\]", line, re.IGNORECASE)
-        ]
+    section_matches = list(re.finditer(r"(?m)^## .+$", existing))
+    preamble = existing[: section_matches[0].start()] if section_matches else existing
+    sections = [
+        existing[match.start() : section_matches[index + 1].start() if index + 1 < len(section_matches) else None]
+        for index, match in enumerate(section_matches)
+    ]
+    old_entries = [
+        line
+        for section in sections
+        if section.splitlines()[0].strip() == "## Recently Completed"
+        for line in section.splitlines()[1:]
+        if re.match(r"^- \[x\]", line, re.IGNORECASE)
+    ]
     suffix = f"; [full archived plan]({archive_path})" if archive_path else ""
     new_entry = f"- [x] {date.today().isoformat()}: Completed {title}{suffix}."
     entries = [new_entry, *[item for item in old_entries if item != new_entry]][:10]
-    return (
-        "# Execution Plans\n\n"
-        f"plan_schema_version: {PLAN_SCHEMA_VERSION}\n\n"
-        "Use this file for active, blocked, ready-for-closure, or recently completed execution work. "
-        "The canonical lifecycle is the installed `engineering-workflow` planning reference.\n\n"
-        "## Recently Completed\n\n" + "\n".join(entries) + "\n"
-    )
+    recent = "## Recently Completed\n\n" + "\n".join(entries)
+    has_recent = any(section.splitlines()[0].strip() == "## Recently Completed" for section in sections)
+    inserted_recent = False
+    retained: list[str] = []
+    for section in sections:
+        heading = section.splitlines()[0].strip()
+        if heading.startswith("## Active Plan:"):
+            if not has_recent and not inserted_recent:
+                retained.append(recent)
+                inserted_recent = True
+            continue
+        if heading == "## Recently Completed":
+            if not inserted_recent:
+                retained.append(recent)
+                inserted_recent = True
+            continue
+        retained.append(section.rstrip())
+    if not inserted_recent:
+        retained.append(recent)
+    return preamble.rstrip() + "\n\n" + "\n\n".join(retained) + "\n"
 
 
 def close_plan(root: Path, disposition: str) -> dict[str, Any]:

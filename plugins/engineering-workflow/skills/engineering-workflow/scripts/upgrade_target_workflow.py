@@ -672,15 +672,23 @@ def _proposed_changes(root: Path, include_agent_config: bool) -> list[dict[str, 
     plans_action = "update" if _present(root / "PLANS.md") else "create"
     changes.append({"path": "PLANS.md", "action": plans_action, "reason": "materialize full migration plan first"})
     template_map = {
-        "AGENTS.md": "AGENTS.md.tmpl",
-        CANONICAL_FILES["principles"]: "project_principles.md.tmpl",
-        CANONICAL_FILES["backlog"]: "TASKS_BACKLOG.md.tmpl",
-        CANONICAL_FILES["pitfalls"]: "AGENT_EXECUTION_PITFALLS.md.tmpl",
+        "AGENTS.md": (
+            "AGENTS.md.tmpl",
+            {
+                "entrypoint_hint": "README.md" if _present(root / "README.md") else ".",
+                "subsystem_hint": "src/" if _present(root / "src") else ".",
+            },
+        ),
+        CANONICAL_FILES["principles"]: ("project_principles.md.tmpl", {}),
+        CANONICAL_FILES["backlog"]: ("TASKS_BACKLOG.md.tmpl", {}),
+        CANONICAL_FILES["pitfalls"]: ("AGENT_EXECUTION_PITFALLS.md.tmpl", {}),
     }
-    for relative in template_map:
+    for relative, (template_name, replacements) in template_map.items():
         if not _present(root / relative):
             changes.append({"path": relative, "action": "create", "reason": "missing canonical shared workflow file"})
-        elif _is_pristine_legacy(relative, _read(root / relative)):
+            continue
+        existing = _read(root / relative)
+        if _is_pristine_legacy(relative, existing) and existing != _template(template_name, replacements):
             changes.append(
                 {"path": relative, "action": "update", "reason": "known pristine legacy template fingerprint"}
             )
@@ -871,6 +879,67 @@ def build_migration_report(
         ],
         "rollback_plan": "Restore every pre-migration file snapshot in reverse mutation order; preserve a PLANS.md failure note if recovery is needed.",
         "include_agent_config": include_agent_config,
+    }
+
+
+def _optional_agent_config_is_current(root: Path, include_agent_config: bool, topology: dict[str, Any]) -> bool:
+    if not include_agent_config:
+        return True
+    config = root / ".codex/config.toml"
+    expected_agents = {f".codex/agents/{name}.toml" for name in ("utility", "explorer", "reviewer")}
+    state_text = _read(root / STATE_MANIFEST_PATH)
+    if not config.is_file() or _first_symlink_component(root, ".codex/config.toml"):
+        return False
+    existing = _read(config)
+    try:
+        merged, _diff = _merge_codex_config(existing)
+    except MigrationConflict:
+        return False
+    present_agents = set(topology["agent_configs"])
+    return (
+        merged == existing
+        and expected_agents.issubset(present_agents)
+        and re.search(r"(?m)^runtime_agent_config_managed:\s*true\s*$", state_text) is not None
+    )
+
+
+def _already_current(report: dict[str, Any], include_agent_config: bool, root: Path) -> bool:
+    topology = report["detected_topology"]
+    required_artifacts = ("root_agents", "plans", "backlog", "pitfalls", "principles", "state_manifest")
+    pristine_update_pending = any(
+        change.get("reason") == "known pristine legacy template fingerprint" for change in report["proposed_changes"]
+    )
+    return (
+        report["success"]
+        and not report["conflicts"]
+        and not report["privacy_findings"]
+        and report["current_workflow_version"] == report["target_version"]
+        and all(topology[name] for name in required_artifacts)
+        and report["instruction_contract"]["success"]
+        and report["archive_indexes"]["success"]
+        and not pristine_update_pending
+        and _optional_agent_config_is_current(root, include_agent_config, topology)
+    )
+
+
+def _already_current_result(report: dict[str, Any], *, mode: str) -> dict[str, Any]:
+    return {
+        **report,
+        "success": True,
+        "mode": mode,
+        "update_status": "already_current",
+        "created_files": [],
+        "changed_files": [],
+        "mutation_log": [],
+        "config_diff": "",
+        "validation_result": {
+            "success": True,
+            "plan_schema": True,
+            "instruction_contract": True,
+            "archive_indexes": True,
+            "privacy": True,
+            "toml": True,
+        },
     }
 
 
@@ -1188,6 +1257,8 @@ def apply_migration(
         }
     if not report["success"]:
         return {**report, "success": False, "mode": "apply", "update_status": "conflict", "mutation_log": []}
+    if _already_current(report, include_agent_config, root):
+        return _already_current_result(report, mode="apply")
 
     try:
         secure_root = _SecureRoot(root, expected_root_identity)
@@ -1515,6 +1586,13 @@ def execute_prompt_upgrade(
             "mutation_log": [],
         }
 
+    if _already_current(report, include_agent_config, repo.resolve()):
+        return {
+            **_already_current_result(report, mode="prompt"),
+            "agent_action": "complete_and_validate",
+            "report_reviewed": True,
+        }
+
     applied = apply_migration(
         repo,
         target_version,
@@ -1553,7 +1631,7 @@ def main() -> int:
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.9.1")
+    parser.add_argument("--target-version", default="0.9.3")
     parser.add_argument("--include-agent-config", action="store_true")
     parser.add_argument(
         "--approve-privacy-review",

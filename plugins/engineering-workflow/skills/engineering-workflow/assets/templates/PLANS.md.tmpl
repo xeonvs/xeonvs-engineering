@@ -2,7 +2,7 @@
 
 plan_schema_version: 2
 
-Use a full active plan for every repository-changing task. Read-only work is exempt. The canonical lifecycle contract is the installed `engineering-workflow` reference `references/planning_and_backlog.md`.
+Use a full active plan for every repository-changing task. Read-only work is exempt. Keep mutable sections current as part of useful work; do not add activity-only rewrites or a second trajectory. The canonical lifecycle contract is the installed `engineering-workflow` reference `references/planning_and_backlog.md`.
 
 ## Active Plan: <short task title>
 
@@ -69,6 +69,8 @@ Each queue item must be ordered, independently checkable, and mapped to every re
 
 - Not run yet.
 
+Record actual runs with their date, scope, and outcome separately from any review that prior evidence remains applicable. `Last Updated` ordering is not proof of validation freshness.
+
 ### Risks And Recovery
 
 - Risk: <failure mode>. Recovery: <bounded rollback or recovery action>.
@@ -76,6 +78,8 @@ Each queue item must be ordered, independently checkable, and mapped to every re
 ### Resume Point
 
 - Start with WQ-01, the first unfinished queue item.
+
+Name only the first unfinished item, its next safe action, and material prerequisites or blockers by reference; do not restate the whole plan.
 
 ### Plan Fidelity Check
 
@@ -93,7 +97,8 @@ Implementation must not begin or continue while this check fails.
 
 ### Reconciliation Check
 
-- [ ] Plan status, requirement statuses, first unfinished queue item, resume point, backlog promotion, latest validation, working tree, indexes, and related workflow docs agree.
+- [ ] During continuous work, changed results and affected plan entries agree; after material context loss, uncertain interruption, a new session, or root handoff, the full plan and sufficient fresh repository/environment observations agree.
+- [ ] Plan status, requirement statuses, first unfinished queue item, resume point, backlog promotion, applicable validation, working tree, indexes, and related workflow docs agree.
 - [ ] Completed sections contain no stale next-work, resume, current-milestone, active-blocker, or open-status wording.
 
 ### Closure Gate
