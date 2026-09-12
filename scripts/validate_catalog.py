@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import re
+import struct
 import subprocess
 from pathlib import Path
 
@@ -14,6 +15,8 @@ CODEX_CATALOG = ROOT / '.agents/plugins/marketplace.json'
 CLAUDE_CATALOG = ROOT / '.claude-plugin/marketplace.json'
 UPSTREAMS = ROOT / 'UPSTREAMS.json'
 PROVENANCE = ROOT / 'PROVENANCE.json'
+LOGO_SVG = ROOT / 'assets/logo.svg'
+LOGO_PNG = ROOT / 'assets/logo.png'
 EXPECTED_NAMES = ['engineering-workflow', 'tgrep-search']
 SHA = re.compile(r'^[0-9a-f]{40}$')
 NAME = re.compile(r'^[a-z0-9-]+$')
@@ -89,7 +92,9 @@ def public_hygiene() -> None:
         try:
             content = path.read_text(encoding='utf-8')
         except UnicodeDecodeError:
-            fail(f'non-text public artifact: {relative}')
+            if relative != Path('assets/logo.png'):
+                fail(f'non-text public artifact: {relative}')
+            continue
         if FORBIDDEN_TEXT.search(content):
             fail(f'forbidden public-content pattern: {relative}')
 
@@ -116,6 +121,14 @@ def validate_source_policy(entry: dict, record: dict) -> None:
 
 
 def validate_catalog(sources: dict[str, Path]) -> None:
+    if not LOGO_SVG.is_file() or not LOGO_PNG.is_file():
+        fail('marketplace branding assets are missing')
+    png = LOGO_PNG.read_bytes()
+    if png[:8] != b'\x89PNG\r\n\x1a\n' or len(png) < 29:
+        fail('invalid marketplace PNG')
+    width, height, bit_depth, color_type = struct.unpack('>IIBB', png[16:26])
+    if (width, height) != (1024, 1024) or bit_depth != 8 or color_type != 2:
+        fail('marketplace PNG must be 1024x1024 fully opaque RGB')
     provenance = read_json(PROVENANCE)
     bundles = provenance.get('bundles')
     if provenance.get('schema_version') != 1 or provenance.get('catalog_version') != '1.0.0':
@@ -136,6 +149,8 @@ def validate_catalog(sources: dict[str, Path]) -> None:
         fail('upstream plugin order or identities drifted')
 
     codex, claude = read_json(CODEX_CATALOG), read_json(CLAUDE_CATALOG)
+    if any('logo' in entry for entry in (codex, claude, *codex.get('plugins', []), *claude.get('plugins', []))):
+        fail('unsupported marketplace logo field')
     if codex.get('name') != 'xeonvs-engineering' or codex.get('interface', {}).get('displayName') != 'Xeonvs Engineering':
         fail('Codex catalog identity drift')
     if claude.get('name') != 'xeonvs-engineering' or claude.get('owner', {}).get('name') != 'xeonvs':
