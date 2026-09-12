@@ -110,6 +110,13 @@ direct_execution
 - 2026-09-12: All 15 current tests, catalog validation, recorded-upstream
   verification for the unchanged baseline bundles, active-plan validation, and
   whitespace checks passed. Catalog manifests contain no unsupported logo field.
+- 2026-09-12: Initial all-plugin sync run `34695567427` correctly failed closed
+  before creating a PR because public hygiene rejected the new plugin PNGs as
+  non-text artifacts. The validator now derives a narrow allowlist only from
+  complete, confined Codex `composerIcon`/`logo`/`logoDark` paths, validates
+  exact dimensions and opaque RGB encoding, rejects image fields in Claude
+  manifests, and still rejects any undeclared binary. All 16 tests plus current
+  baseline catalog/provenance validation pass after the correction.
 
 ### Risks And Recovery
 
@@ -123,8 +130,8 @@ direct_execution
 
 ### Resume Point
 
-- Start with WQ-02 after both source releases by dispatching the existing
-  all-plugin synchronization workflow and reviewing its exact generated PR.
+- Continue WQ-02 by merging the validated binary-asset guard, then repeat the
+  all-plugin synchronization workflow and review its exact generated PR.
 
 ### Plan Fidelity Check
 
