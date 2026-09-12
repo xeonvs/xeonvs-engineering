@@ -35,7 +35,7 @@ When delegation is permitted by the host and the criteria above are met, delegat
 
 Carry the user's intended task through its verified completion within the established scope. Before asking for a decision or permission, follow `question_matrix.md` rather than treating a reference to approval as a fresh approval requirement.
 
-Treat a new message during work as steering the active task unless the user clearly cancels it or requests an incompatible replacement. Incorporate corrections and additions, answer side questions briefly, then continue the outstanding work. Preserve completed results, the original objective, and accepted constraints across interruptions or compaction; reconcile changed requirements and the next safe action in the durable plan before further implementation.
+Treat a new message during work as steering the active task unless the user clearly cancels it or requests an incompatible replacement. Incorporate corrections and additions, answer side questions briefly, then continue the outstanding work. Preserve completed results, the original objective, and accepted constraints across interruptions or compaction. With current task context retained, update only the affected durable state; after material context loss or uncertain execution, recover from the current full plan and sufficient fresh observations rather than reconstructing the whole trajectory. Follow `planning_and_backlog.md` for that continuity/recovery distinction.
 
 Make progress updates and handoff concise and outcome-led. Explain the result, material decisions, validation evidence, and remaining work in plain language; use lists or tables when they improve comparison or sequencing. Preserve the user's requested detail and complete evidence, linking durable artifacts rather than repeating logs or successful checks.
 
@@ -58,6 +58,8 @@ Do not spend model turns waiting. A periodic workflow should run a bounded deter
 
 Keep approvals, semantic decisions, native-artifact validation, and final evidence review as direct root-agent actions.
 
+Batch independent or predictably dependent deterministic operations through an existing native mechanism when attribution, failure state, approvals, and required evidence remain intact. Stop when the declared result and required evidence are sufficient; an available extra read, tool, or delegation is not a reason to continue. Do not impose a universal counter or metadata envelope on ordinary tool calls outside an existing tool-specific output or safety contract.
+
 ## Programmatic Tool Route
 
 Programmatic Tool Calling is an execution route for one bounded deterministic stage, not a general request to minimize model turns. Candidate discovery, repository maturity and ownership analysis, architecture choices, and the decision about which facts describe the stage remain direct model judgment.
@@ -74,7 +76,7 @@ Select Programmatic Tool Calling only when all of these are established:
 - the final result can use one explicit structured schema while preserving the evidence required downstream
 - maximum calls, concurrency, retry budget, stopping condition, and failure shape are explicit
 
-Use direct calls when one call or one adequate native script is sufficient, when control flow is adaptive, when result schemas are unknown, or when the work includes semantic review, architecture or algorithm selection, implementation, approval, mutation, browser/citation work, native artifacts, final validation, or final user-facing synthesis. If a material ownership, schema, or acceptance fact remains unresolved after bounded read-only investigation, ask one targeted question instead of guessing.
+Use direct calls when one call or one adequate native script is sufficient, when control flow is adaptive, when result schemas are unknown, or when the work includes semantic review, architecture or algorithm selection, implementation, approval, mutation, browser/citation work, native artifacts, final validation, or final user-facing synthesis. Do not create a helper or Programmatic Tool Calling descriptor for an ordinary call that is already sufficient. If a material ownership, schema, or acceptance fact remains unresolved after bounded read-only investigation, ask one targeted question instead of guessing.
 
 Before execution, pass the model-established stage facts through `scripts/assess_programmatic_stage.py`. A `programmatic` result supplies the complete instruction block from the installed runtime template. A `direct` result keeps the work model-guided. An `ask` result identifies only the missing material fields. If the helper or runtime capability is unavailable, use direct calls and do not simulate or claim Programmatic Tool Calling.
 
@@ -156,6 +158,8 @@ Only the root agent writes:
 
 A subagent may return a proposed patch or evidence, but the root agent reconciles it against current shared state before applying or accepting it.
 
+An external orchestrator launching or relaying an agent does not transfer the established root's ownership automatically. A child or remote session may have a different workspace, loaded instructions, task context, and file access; provide the necessary task-local inputs explicitly and keep one plan writer for the same scope.
+
 ## Subagent Contract
 
 Every delegation states:
@@ -171,6 +175,8 @@ Every delegation states:
 - whether the root waits for all results
 
 Do not leak the expected answer or a hidden diagnosis into an independent evaluation prompt. Give raw artifacts and the minimum task-local context needed for transferable validation.
+
+Delegate only work that is necessary and independently semantic with a concrete benefit. Do not delegate duplicate reading or create a plan controller whose only purpose is to recheck unchanged shared state. Consume the returned findings, scope, evidence, and limits without replaying the worker's full trajectory; the root still verifies applicability and performs required independent or final review. A return to the same root with current context is a continuity event, not a recovery or ownership handoff by itself.
 
 ## Monitoring And Long-Running Work
 

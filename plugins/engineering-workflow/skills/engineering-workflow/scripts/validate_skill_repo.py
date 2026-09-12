@@ -392,7 +392,7 @@ def _validate_plan_contract(repo_root: Path) -> list[str]:
             "compressed_active_plan: forbidden",
             "closure_transition: checked",
             "archive_indexing: atomic",
-            "## Resume And Milestone Reconciliation",
+            "## Continuity And Recovery Reconciliation",
             "## Closure State Machine",
         )
         for marker in markers:

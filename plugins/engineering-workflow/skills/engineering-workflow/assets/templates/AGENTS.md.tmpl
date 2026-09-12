@@ -2,7 +2,7 @@
 
 instruction_contract_version: 3
 
-Use this file as a short route map, not as a project manual. Read the matched owners before changing the routed path and run the named guards before closure. All matching routes apply, including the general repository-change route for specialized changes.
+Use this file as a short route map, not as a project manual. Read the matched owners before changing the routed path and run the named guards before closure. All matching routes apply, including the general repository-change route for specialized changes, but one current owner or unchanged-state guard is not repeated merely because several routes reference it.
 
 ## Repo Map
 
@@ -21,7 +21,7 @@ Use this file as a short route map, not as a project manual. Read the matched ow
 ## Task Routes
 
 <!-- ew:route id="execution-context" triggers="**" owners="skill://engineering-workflow/references/platform_compatibility.md|skill://engineering-workflow/references/question_matrix.md|skill://engineering-workflow/references/agent_orchestration.md" guards="manual_review:verify native host behavior scope authorization task continuity and handoff" -->
-| `execution-context` | every task, including clarification, steering, delegation, and handoff | platform reference first, then question policy and platform-selected shared orchestration sections | scope and host-capability review |
+| `execution-context` | every task, including clarification, steering, delegation, and handoff | platform reference first, then question policy and host-compatible shared orchestration sections | scope and host-capability review |
 
 <!-- ew:route id="planning" triggers="PLANS.md|docs/codex/TASKS_BACKLOG.md|docs/archive/**|workflow-state plan archive|plan closure" owners="skill://engineering-workflow/references/planning_and_backlog.md" guards="lint:plan-lifecycle" -->
 | `planning` | plan, backlog, closure, or default/custom workflow-state archive | installed planning reference | `lint:plan-lifecycle` |

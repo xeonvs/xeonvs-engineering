@@ -22,12 +22,12 @@ Convert a recurring failure class into one canonical invariant, a reachable task
 <!-- ew:invariant id="workflow.efficient-execution" -->
 ### Efficient Execution
 
-Preserve correctness, safety, explicit requirements, and required evidence before optimizing calls or output. Use bounded reconnaissance and focused inspection, but fully ingest sources needed for exact edits; prefer repository-native automation and avoid unrelated work.
+Preserve correctness, safety, explicit requirements, and required evidence before optimizing calls or output. Use bounded reconnaissance and focused inspection, but fully ingest sources needed for exact edits; prefer repository-native automation and avoid unrelated work. Maintain affected durable state as facts change before dependent actions or handoff, reuse still-current task context, and do not create a periodic model loop that rewrites or rechecks unchanged state.
 
 <!-- ew:invariant id="workflow.evidence-driven-completion" -->
 ### Evidence-Driven Completion
 
-Define green from the task's required checks. Treat environmental and unrelated failures explicitly, change the hypothesis from relevant evidence, make the smallest supported correction, and stop after the required final state is proven.
+Define green from the task's required checks. Treat environmental and unrelated failures explicitly, change the hypothesis from relevant evidence, make the smallest supported correction, and stop after the required final state is proven. Keep an actual check run distinct from reviewing whether its evidence still applies; bookkeeping alone does not invalidate every implementation result, while a material changed input invalidates the affected evidence.
 
 Before every authorized push, follow the installed `engineering-workflow` privacy reference: scan the final public tree and every ref the push can expose, keep candidate values out of agent output, and block the push until every finding is safely classified and remediated. Never weaken a scanner or rewrite history merely to make the gate green.
 
@@ -47,7 +47,7 @@ For long-running commands, follow the installed `engineering-workflow` completio
 - Scope, existing authorization, and targeted questions: installed `engineering-workflow` skill, `references/question_matrix.md`.
 - Planning details: installed `engineering-workflow` skill, `references/planning_and_backlog.md`.
 - Instruction ownership and incident lifecycle: installed `engineering-workflow` skill, `references/instruction_lifecycle.md`.
-- Task continuity, delegation, handoff, and waiter integrity: platform-selected shared sections of installed `engineering-workflow` skill, `references/agent_orchestration.md`.
+- Task continuity, delegation, handoff, and waiter integrity: host-compatible shared sections of installed `engineering-workflow` skill, `references/agent_orchestration.md`.
 - Validation and execution safety: installed `engineering-workflow` skill, `references/validation_safety.md`.
 - Privacy and pre-push secret gating: installed `engineering-workflow` skill, `references/privacy_and_sanitization.md`.
 - Repository-specific architecture, product, operations, QA, release, and security rules remain under their existing owners and should be added to the matching `AGENTS.md` route.

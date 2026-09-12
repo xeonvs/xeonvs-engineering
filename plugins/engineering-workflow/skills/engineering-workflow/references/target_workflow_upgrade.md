@@ -33,6 +33,8 @@ Treat `Upgrade A Target Workflow` plus a target repository as an authorized repo
 8. If `privacy_review.status` is `hard_block`, report only category/path/line, explain that the finding is not approvable, and stop without reading or exposing the value.
 9. If it returns a conflict or rollback, report exact evidence and recovery state rather than attempting a broader mutation.
 
+If the target already records the requested version, all canonical artifacts exist, instruction and index contracts pass, privacy/conflict checks are clear, no registered pristine bytes need an actual update, and any requested optional agent configuration is already fully present, prompt/apply returns `update_status: already_current` with an empty mutation log. It does not create a plan or rewrite state/index files merely to reconfirm that unchanged result. A missing artifact, older contract, drift, conflict, privacy boundary, or requested but incomplete optional configuration keeps the normal guarded path.
+
 The user may explicitly request report-only behavior; then invoke `--plan`. Runtime agent configuration remains opt-in through the user's prompt and `--include-agent-config`.
 
 ## CLI Contract
@@ -95,6 +97,8 @@ Run `instruction_contract.py` during report and apply. A target version stamp re
 Automatic replacement is limited to missing files and known pristine template fingerprints. Existing navigation README files without managed index markers require a targeted placement decision. Create `docs`, `docs/codex`, and `docs/engineering` indexes with the canonical workflow files; create archive indexes only for archive directories that already exist or are created by the operation.
 
 For instruction contract version 3, the report exposes current/required contract versions and missing required invariant/route IDs. Replace known pristine legacy templates by fingerprint. For customized older owners, return `agent_action: review_instruction_migration` without target writes or a new version stamp. Follow `instruction_lifecycle.md`: the model reads the existing owner, preserves an equivalent rule under the required stable marker or adds only the missing rule/route, then reruns report and validation. Ask the user only when the existing repository contains incompatible owners or another genuine unresolved ownership decision.
+
+For a compatible release that refines semantics without changing the instruction contract version, do not accumulate versioned template copies or fingerprints unless target-local bytes must change for correctness. When the installed canonical owners carry the new behavior and the previous local owner remains compatible, migrate the runtime/version state and leave that owner intact. Preserve customized owners byte-for-byte unless model-guided review finds that the target-requested adoption lacks required local meaning; then make the narrow owner-preserving correction before guarded apply. Structural validation and a new version stamp are not evidence of semantic adoption on their own, and this boundary does not justify a phrase-based semantic validator or mass rewrite.
 
 ## Conflict Analysis
 
