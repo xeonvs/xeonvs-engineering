@@ -1,5 +1,13 @@
 # Execution Plans
 
+plan_schema_version: 2
+
+Use this file for active, blocked, ready-for-closure, or recently completed execution work. The canonical lifecycle is the installed `engineering-workflow` planning reference.
+
+## Recently Completed
+
+- [x] 2026-09-12: Completed Repair Marketplace Sync Authentication For Engineering Workflow 0.9.2.
+
 ## Completed Work
 
 ### xeonvs-engineering 1.0.1 — initial unified marketplace
@@ -13,7 +21,7 @@
   provenance; deterministic identity, byte, package, and public-content
   validation; sync automation; Draft review; immutable GitHub release; native
   direct-skill guidance for OpenCode and other agents.
-- **Current source inputs:** `engineering-workflow` **0.9.1** from
+- **1.0.1 release source inputs:** `engineering-workflow` **0.9.1** from
   `xeonvs/codex-engineering-workflow` immutable annotated tag `v0.9.1` at
   `80c6a39eab44f9a78f492adb91811b447da6c73d`. `tgrep-search` **1.0.1** comes
   from immutable release tag `v1.0.1` at
@@ -36,6 +44,6 @@
 
 ## Completion
 
-Completed on 2026-09-09. Marketplace release [`v1.0.1`](https://github.com/xeonvs/xeonvs-engineering/releases/tag/v1.0.1) contains only intended source assets and checksummed bundles; both catalogs resolve the current verified packages. The sync workflow remains review-only and can produce one Draft PR for a newer eligible source package. Codex has installed and discovered enabled `tgrep-search@xeonvs-engineering` `1.0.1`; the superseded direct local skill is removed after managed-install readback, and no unrelated agent installation changed.
+Completed on 2026-09-09. Marketplace release [`v1.0.1`](https://github.com/xeonvs/xeonvs-engineering/releases/tag/v1.0.1) contains only intended source assets and checksummed bundles; at that release boundary both catalogs resolved the verified packages recorded above. The sync workflow remains review-only and can produce one Draft PR for a newer eligible source package. Codex installed and discovered enabled `tgrep-search@xeonvs-engineering` `1.0.1`; the superseded direct local skill was removed after managed-install readback, and no unrelated agent installation changed.
 
 This is a documentation and closure record only. It changes no shipped plugin bundle, provenance, or marketplace artifact contract, so it does not create a new marketplace release.

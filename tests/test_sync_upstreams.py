@@ -17,6 +17,19 @@ SPEC.loader.exec_module(sync)
 
 
 class SyncConfigurationTest(unittest.TestCase):
+    def test_sync_workflow_authenticates_git_without_persisting_checkout_credentials(self) -> None:
+        workflow = (ROOT / '.github/workflows/sync-upstreams.yml').read_text()
+        setup = workflow.index('gh auth setup-git --hostname github.com')
+        remote_read = workflow.index('git ls-remote')
+        push = workflow.index('git push')
+
+        self.assertIn('persist-credentials: false', workflow)
+        self.assertIn('GH_TOKEN: ${{ github.token }}', workflow)
+        self.assertLess(setup, remote_read)
+        self.assertLess(remote_read, push)
+        self.assertIn('git push --force-with-lease="refs/heads/$branch:$expected_remote"', workflow)
+        self.assertNotIn('x-access-token', workflow)
+
     def test_upstreams_match_recorded_provenance_and_bundles(self) -> None:
         upstreams = sync.configured_upstreams()
         _, records = sync.provenance_records()

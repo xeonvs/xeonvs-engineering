@@ -49,6 +49,7 @@ jobs:
             echo 'No eligible source version is newer than the catalog.'
             exit 0
           fi
+          gh auth setup-git --hostname github.com
           branch=automation/marketplace-sync
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
             expected_remote=$(git ls-remote --heads origin "$branch" | awk '{print $1}')
