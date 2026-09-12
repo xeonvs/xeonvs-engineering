@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Engineering Workflow</title>
+  <desc id="desc">Three controlled workflow stages cycle around a verified result.</desc>
+  <rect width="1024" height="1024" fill="#101828"/>
+  <path d="M310 214h272l134 138-74 72-94-98H310z" fill="#3972F6"/>
+  <path d="M250 390l110-50 46 90-72 160 120 152-90 68-154-200z" fill="#22C7D9"/>
+  <path d="M770 390l88 68-108 228-234 84-38-104 190-66 80-176z" fill="#2DD4BF"/>
+  <path d="M512 378l116 67v134l-116 67-116-67V445z" fill="#F6F7F9"/>
+  <path d="M452 512l42 42 82-88" fill="none" stroke="#101828" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

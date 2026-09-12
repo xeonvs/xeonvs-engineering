@@ -1631,7 +1631,7 @@ def main() -> int:
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.9.3")
+    parser.add_argument("--target-version", default="0.9.4")
     parser.add_argument("--include-agent-config", action="store_true")
     parser.add_argument(
         "--approve-privacy-review",
