@@ -8,6 +8,7 @@ import json
 import re
 import struct
 import subprocess
+import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +18,11 @@ UPSTREAMS = ROOT / 'UPSTREAMS.json'
 PROVENANCE = ROOT / 'PROVENANCE.json'
 LOGO_SVG = ROOT / 'assets/logo.svg'
 LOGO_PNG = ROOT / 'assets/logo.png'
+ICON_FIELDS = {
+    'composerIcon': (128, 128),
+    'logo': (1024, 1024),
+    'logoDark': (1024, 1024),
+}
 EXPECTED_NAMES = ['engineering-workflow', 'tgrep-search']
 SHA = re.compile(r'^[0-9a-f]{40}$')
 NAME = re.compile(r'^[a-z0-9-]+$')
@@ -70,6 +76,90 @@ def read_json(path: Path) -> dict:
     return value
 
 
+def validate_opaque_png(path: Path, dimensions: tuple[int, int], label: str) -> None:
+    try:
+        png = path.read_bytes()
+    except OSError as exc:
+        fail(f'missing {label}: {exc}')
+    if png[:8] != b'\x89PNG\r\n\x1a\n' or len(png) < 45:
+        fail(f'invalid PNG: {label}')
+    width, height, bit_depth, color_type, compression, filtering, interlace = struct.unpack(
+        '>IIBBBBB', png[16:29]
+    )
+    if (width, height) != dimensions or (bit_depth, color_type) != (8, 2):
+        fail(f'{label} must be {dimensions[0]}x{dimensions[1]} fully opaque RGB')
+    if (compression, filtering, interlace) != (0, 0, 0):
+        fail(f'unsupported PNG encoding: {label}')
+    offset, idat, seen_ihdr, seen_iend = 8, [], False, False
+    while offset < len(png):
+        if offset + 12 > len(png):
+            fail(f'truncated PNG chunk: {label}')
+        length = int.from_bytes(png[offset:offset + 4], 'big')
+        chunk_type = png[offset + 4:offset + 8]
+        chunk_end = offset + 12 + length
+        if chunk_end > len(png):
+            fail(f'truncated PNG chunk: {label}')
+        chunk_data = png[offset + 8:offset + 8 + length]
+        expected_crc = int.from_bytes(png[offset + 8 + length:chunk_end], 'big')
+        if zlib.crc32(chunk_data, zlib.crc32(chunk_type)) != expected_crc:
+            fail(f'invalid PNG checksum: {label}')
+        if chunk_type == b'IHDR':
+            if seen_ihdr or offset != 8 or length != 13:
+                fail(f'invalid PNG header order: {label}')
+            seen_ihdr = True
+        elif chunk_type == b'IDAT':
+            idat.append(chunk_data)
+        elif chunk_type == b'IEND':
+            if length or chunk_end != len(png):
+                fail(f'invalid PNG ending: {label}')
+            seen_iend = True
+        offset = chunk_end
+    if not seen_ihdr or not seen_iend or not idat:
+        fail(f'incomplete PNG: {label}')
+    try:
+        pixels = zlib.decompress(b''.join(idat))
+    except zlib.error:
+        fail(f'invalid PNG pixel stream: {label}')
+    row_size = 1 + dimensions[0] * 3
+    if len(pixels) != dimensions[1] * row_size:
+        fail(f'invalid PNG pixel dimensions: {label}')
+    if any(pixels[row * row_size] > 4 for row in range(dimensions[1])):
+        fail(f'invalid PNG row filter: {label}')
+
+
+def declared_binary_assets() -> dict[Path, tuple[int, int]]:
+    assets = {Path('assets/logo.png'): (1024, 1024)}
+    for name in EXPECTED_NAMES:
+        bundle = ROOT / 'plugins' / name
+        manifest = read_json(bundle / '.codex-plugin/plugin.json')
+        interface = manifest.get('interface')
+        if not isinstance(interface, dict):
+            fail(f'Codex interface metadata missing: {name}')
+        present = {field for field in ICON_FIELDS if field in interface}
+        if present and present != set(ICON_FIELDS):
+            fail(f'incomplete Codex icon metadata: {name}')
+        if present:
+            brand_color = interface.get('brandColor')
+            if not isinstance(brand_color, str) or not re.fullmatch(r'#[0-9A-Fa-f]{6}', brand_color):
+                fail(f'invalid Codex brand color: {name}')
+        for field in present:
+            raw = interface[field]
+            if not isinstance(raw, str) or not raw.startswith('./'):
+                fail(f'invalid Codex icon path: {name}:{field}')
+            relative = Path(raw.removeprefix('./'))
+            if relative.is_absolute() or '..' in relative.parts or relative.suffix.lower() != '.png':
+                fail(f'unsafe Codex icon path: {name}:{field}')
+            public_path = Path('plugins') / name / relative
+            if public_path in assets and assets[public_path] != ICON_FIELDS[field]:
+                fail(f'conflicting Codex icon path: {name}:{field}')
+            validate_opaque_png(ROOT / public_path, ICON_FIELDS[field], f'{name}:{field}')
+            assets[public_path] = ICON_FIELDS[field]
+        claude = read_json(bundle / '.claude-plugin/plugin.json')
+        if any(field in claude for field in (*ICON_FIELDS, 'brandColor')):
+            fail(f'unsupported Claude image metadata: {name}')
+    return assets
+
+
 def public_files() -> list[Path]:
     commands = (
         ['git', '-C', str(ROOT), 'ls-files', '-z'],
@@ -85,6 +175,7 @@ def public_files() -> list[Path]:
 
 
 def public_hygiene() -> None:
+    binary_assets = declared_binary_assets()
     for path in public_files():
         relative = path.relative_to(ROOT)
         if path.is_symlink():
@@ -92,8 +183,10 @@ def public_hygiene() -> None:
         try:
             content = path.read_text(encoding='utf-8')
         except UnicodeDecodeError:
-            if relative != Path('assets/logo.png'):
+            dimensions = binary_assets.get(relative)
+            if dimensions is None:
                 fail(f'non-text public artifact: {relative}')
+            validate_opaque_png(path, dimensions, relative.as_posix())
             continue
         if FORBIDDEN_TEXT.search(content):
             fail(f'forbidden public-content pattern: {relative}')
@@ -123,12 +216,7 @@ def validate_source_policy(entry: dict, record: dict) -> None:
 def validate_catalog(sources: dict[str, Path]) -> None:
     if not LOGO_SVG.is_file() or not LOGO_PNG.is_file():
         fail('marketplace branding assets are missing')
-    png = LOGO_PNG.read_bytes()
-    if png[:8] != b'\x89PNG\r\n\x1a\n' or len(png) < 29:
-        fail('invalid marketplace PNG')
-    width, height, bit_depth, color_type = struct.unpack('>IIBB', png[16:26])
-    if (width, height) != (1024, 1024) or bit_depth != 8 or color_type != 2:
-        fail('marketplace PNG must be 1024x1024 fully opaque RGB')
+    validate_opaque_png(LOGO_PNG, (1024, 1024), 'marketplace logo')
     provenance = read_json(PROVENANCE)
     bundles = provenance.get('bundles')
     if provenance.get('schema_version') != 1 or provenance.get('catalog_version') != '1.0.0':
