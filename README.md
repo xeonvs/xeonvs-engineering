@@ -50,6 +50,13 @@ stable annotated SemVer tag of an allowlisted source. The installed catalog
 bundle is pinned to that tag's resolved immutable commit; installation never
 follows a branch or floating tag.
 
+Upstream source changes must first be merged and released as an annotated tag;
+catalog synchronization imports only that released tag. Do not invent future
+provenance or hand-edit vendored bundles. After source releases exist, the
+scheduled or explicitly requested synchronizer produces the byte-verified
+update and its review-required PR. Preparing a source PR does not require
+waiting for its release or starting a synchronization run.
+
 `python3 scripts/validate_catalog.py` validates catalog identity, plugin
 manifests, local bundle checksums, and public-content hygiene. CI also runs
 `python3 scripts/sync_upstreams.py --verify-recorded` to prove that the
