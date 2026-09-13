@@ -55,6 +55,11 @@ TARGET_VERSION_RE = re.compile(
 )
 LEGACY_PRISTINE_HASHES = {
     "AGENTS.md": {
+        # 0.9.2-0.9.4 rendered routes require narrowing in target-local bytes.
+        "e1108fac31610c6152594713dc4718433cabebe9e9438ab19b3b976024249810",
+        "cb5680f03322d35accd82791cd1dd13f3f555f7ae32f59106d12a2c0bde3f8db",
+        "7e9a00526bfaca2ba52ada47b1b5c4841ef7fe234081a8a18f4d735b284e7850",
+        "369752216cdf90a551f5ea473fcd8803667c53cf9d41e313605e80cbcba22f21",
         "a8d95f1fa60b6d1e5e2adebf26003bae3cfeb1528f375e4b2579adc25ad58024",
         "8677f495bb2c8017d3cd4e76ab87e5a4390a3d4e8d2127b8c8450c92f1fbc5b7",
         "ab74ed6dfce15e498efe3a55e8282b9b7e02e0e4aab43853dfb3caa51d567001",
@@ -72,6 +77,8 @@ LEGACY_PRISTINE_HASHES = {
         "cc1e93e5ecf382d71c16212fcb7b94dacb604616e716f6d4d476c112e0392070",
     },
     CANONICAL_FILES["principles"]: {
+        # Replace the unconditional durable-artifact requirement, not custom prose.
+        "c4ebd34d0e9606a1b3daf5bdece510cd9b3052d40469123ff086938b49904973",
         "c37b57e9c654e36c5e4269b0e9f43b736d25ba11b9894d4784c24a95c9fe47fe",
         "cb72c47c3d9d7165eaeedfcded0d222a1d558ec90440887bf8569862b307b5aa",
         "9c54b3d5b7cddee93c9de05e75035f0750527bc0e86fe985b2cda95ede9ceb9f",
@@ -1631,7 +1638,7 @@ def main() -> int:
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.9.4")
+    parser.add_argument("--target-version", default="0.9.5")
     parser.add_argument("--include-agent-config", action="store_true")
     parser.add_argument(
         "--approve-privacy-review",

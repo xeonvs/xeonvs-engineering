@@ -21,10 +21,10 @@ safe, or correct. Inspect the owning code and tests before acting on it.
 
 | Situation | Use | Why |
 | --- | --- | --- |
-| One query or a small tree | `tgrep -- ...` | Avoid setup cost; it falls back to an ordinary scan when no index exists. |
+| One query or a small tree | `rg -- ...` or already-available `tgrep -- ...` | Avoid setup cost. |
 | Several queries in one task | `tgrep index ...`, then indexed searches | One bounded index amortizes repeated discovery. |
 | Long-lived terminal session with many edits | One managed `tgrep serve ...` | A shared local server maintains a live overlay and answers multiple clients. |
-| Exact post-edit or exhaustive absence check | `tgrep --no-index ...` | It reads the current filesystem rather than a possibly stale snapshot. |
+| Exact post-edit or exhaustive absence check | `rg -- ...` or `tgrep --no-index ...` | Read the current filesystem rather than a possibly stale snapshot. |
 
 Do not start a persistent server for a short task or a non-persistent agent
 runtime. A personal or non-coding agent can use the same modes over an
@@ -33,11 +33,21 @@ applies only to repositories.
 
 ## Availability and boundaries
 
-1. Check `tgrep --version` or `tgrep --help`. If unavailable, use only the
-   current installation instructions in the official
-   [microsoft/tgrep repository](https://github.com/microsoft/tgrep):
-   `brew install tgrep`, `cargo install --path tgrep-cli --locked` from an
-   official checkout, or a platform-appropriate official GitHub Release. Verify
+For a small or one-off search, start with the available `rg` installation (or
+an already-available `tgrep` without setup). Use `rg` for hidden-file searches
+with `--hidden` and for exact current-filesystem searches; `--no-index` is a
+`tgrep`-only flag and must not be passed to `rg`. Do not install `tgrep`, build
+an index, or start a server merely to perform that search. Install it only when
+the user explicitly requests installation or when repeated discovery justifies
+setup and normal authorization permits it.
+
+1. If indexed mode is selected and `tgrep` availability is unknown, check
+   `tgrep --version` or `tgrep --help`. If installation is explicitly
+   requested or justified by repeated discovery, use only the current
+   installation instructions in the official
+   [microsoft/tgrep repository](https://github.com/microsoft/tgrep): `brew
+   install tgrep`, `cargo install --path tgrep-cli --locked` from an official
+   checkout, or a platform-appropriate official GitHub Release. Verify
    `tgrep --help` afterwards. Do not substitute a similarly named package or an
    unverified binary. Respect the agent's normal installation and approval
    boundary.
@@ -100,6 +110,9 @@ prevents an accidental subcommand when searching for words such as `index` or
 `serve`:
 
 ```bash
+# Small or one-off search, including hidden files, without index setup.
+rg --hidden -n -S --glob '!.git/**' -- 'parse_config' src tests
+
 # Literal symbol/value: safest default for user-provided text.
 tgrep --index-path .tgrep-index -F -n -C 2 -- 'OCR_REVIEW_PROGRESS' src tests docs
 

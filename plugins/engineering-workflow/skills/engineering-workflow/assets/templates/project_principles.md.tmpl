@@ -39,7 +39,7 @@ Before each logical commit, review the complete intended slice against requireme
 <!-- ew:invariant id="workflow.completion-driven-wait" -->
 ### Completion-Driven Wait
 
-For long-running commands, follow the installed `engineering-workflow` completion-driven waiter and bounded-output contract. Keep full logs and required terminal results in private task-owned ignored artifacts, verify them independently of a possibly truncated waiter cell, and do not wake the model for periodic empty polls when the environment can wait for completion.
+For long-running commands, follow the installed `engineering-workflow` completion-driven waiter and bounded-output contract. Use native terminal evidence when sufficient; retain private logs or durable results when needed for output volume or recovery. Do not wake the model for periodic empty polls when the environment can wait for completion.
 
 ## Owned References
 

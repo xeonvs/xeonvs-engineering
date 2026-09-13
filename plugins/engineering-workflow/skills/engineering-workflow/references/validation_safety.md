@@ -61,6 +61,8 @@ Preserve internal symlinks, but reject the run if a copied symlink resolves outs
 
 Use only when mutation of the real target is explicitly authorized and belongs to the requested workflow. Validation authorization does not broaden product or operational scope.
 
+Apply `question_matrix.md` to established authorization: an implementation request covers known local checks and affected reruns when their repository, side effects, and environment are already within scope. Do not ask for separate approval solely because a check executes repository code. Inspect unknown commands first; production access, credentials, network changes, and unrelated mutations need their own applicable authorization. This does not change the deterministic runner's selected mode or bypass an offline/sandbox requirement.
+
 ## Token-Aware Classification
 
 Parse a single command with `shlex` or an equivalent tokenizer. Reject malformed input and shell control syntax conservatively.
