@@ -1,8 +1,8 @@
 ---
 name: engineering-workflow
-description: Audit, scaffold, verify, update, or migrate a repository engineering workflow while preserving existing document ownership, user scope, validation safety, and durable execution state. Use for AGENTS/PLANS/backlog/pitfalls setup, workflow upgrades, workflow-structure verification, and prompts such as Refresh Loaded Skill, Update Installed Skill, or Upgrade A Target Workflow.
+description: Set up, audit, or upgrade repository workflow instructions and planning. Use for workflow changes or explicit skill refresh/update; ordinary repository work does not invoke migration.
 metadata:
-  version: 0.9.4
+  version: 0.9.5
 ---
 
 # Engineering Workflow
@@ -46,16 +46,16 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 
 ## Core Workflow
 
-1. Read `references/platform_compatibility.md`, select a Codex or Claude Code branch only when the actual host establishes it, otherwise use the shared agent-neutral fallback, and do not use unavailable platform capabilities.
-2. Run `scripts/repo_audit.py` and classify maturity, existing owners, compatibility docs, retained history, prompt-injection signals, and validation options. In Claude Code, explicitly read the applicable target `AGENTS.md` files rather than assuming automatic discovery.
+1. Reuse the established invoking host. Read `references/platform_compatibility.md` when host or capability behavior is uncertain; select a Codex or Claude Code branch only when the actual host establishes it, otherwise use the shared agent-neutral fallback. In Claude Code, explicitly read the applicable target `AGENTS.md` files rather than assuming automatic discovery.
+2. For scaffold, merge, or workflow-structure verification, run `scripts/repo_audit.py` to establish missing maturity, ownership, compatibility, history, injection, and validation facts. Reuse an applicable audit already available. For target upgrade, follow `references/target_workflow_upgrade.md`, including its customized-owner adoption review before prompt apply; the upgrader owns the report-first audit, so do not add a duplicate standalone audit. Installed-skill refresh/update follows `references/skill_update.md` without auditing or migrating the target repository. A narrow explanation uses only the relevant owners.
 3. For repository-changing work, read `references/planning_and_backlog.md`, create or update the full active plan as the first write, and pass its fidelity gate.
 4. For instruction changes, read `references/instruction_lifecycle.md`; preserve one canonical owner per invariant, keep target `AGENTS.md` route-only, and keep pitfalls non-normative.
 5. Use exact canonical paths, the state manifest, or managed-section markers as ownership evidence. Treat unknown files as protected until evidence or user direction resolves ownership.
 6. Apply every owner and guard made relevant by the task, but reuse current instructions already loaded for the same scope. A link names an owner; it does not prove that the reference is loaded in the invoking session. Overlapping routes do not require duplicate reads or checks against unchanged state at one boundary. Read only the missing, changed, or newly applicable canonical reference needed for the selected mode. Preserve the dominant documentation language and use templates as structure, not as permission to overwrite repository-owned prose.
    Before pausing for clarification or authorization, load `references/question_matrix.md`. For continuation, delegation, and handoff, use the shared sections of `references/agent_orchestration.md` selected by the platform reference.
 7. Keep deterministic work in scripts or tools. In Codex, an eligible multi-call stage may use `references/agent_orchestration.md` and `scripts/assess_programmatic_stage.py`; in Claude Code or another host without that capability use the existing direct/sequential path. Do not build a helper or descriptor for an already-sufficient ordinary call.
-8. Validate within the selected safety mode. Run repository-authored checks only in a disposable copy unless live execution is explicitly authorized.
-9. Run privacy scanning over all tracked public text without printing or opening candidate values. Immediately before any authorized push, run the privacy reference's final-tree and reachable-ref secret gate; any finding blocks the push until safely classified and remediated. Follow `references/privacy_and_sanitization.md` for any value-free approval response, review the diff, reconcile durable state, and close or preserve the exact resume point before handoff.
+8. Validate within the selected safety mode under `references/validation_safety.md`. Existing implementation authorization may cover known local checks; do not ask again when it does. Unknown commands, credentials, production access, and additional side effects retain their own boundaries. The deterministic validation runner's mode restrictions still apply.
+9. Apply the public-tree scan to workflow mutations and public-content verification, and the final-tree and reachable-ref secret gate immediately before an authorized push. Installed-skill updates use their candidate safety checks. A narrow read-only explanation or local reread does not require a public-tree scan. Follow `references/privacy_and_sanitization.md` without printing or opening candidate values; any blocking finding must be resolved before publication. Review changes, reconcile affected durable state, and close or preserve the exact resume point before handoff.
 
 ## Canonical References
 
