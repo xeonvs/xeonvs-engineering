@@ -23,9 +23,11 @@ Stable contract marker: `orchestration_contract_version: 3`.
 
 ## Default Route
 
-Use one root agent by default. Add a subagent only when the delegated work is independent, bounded, has a clear output contract, avoids frequent writes to shared mutable state, and has a measurable latency, context-isolation, or coverage benefit.
+Use one root agent by default. The root keeps the task's working representation: current intent, accepted decisions, implementation state, unresolved blockers, integration state, and the next safe action. Detailed durable knowledge belongs in repository artifacts rather than depending on the conversation or a complete execution transcript.
 
-Tool availability is not a reason to delegate. Keep ordered dependency chains, small tasks, shared-resource work, and tasks dominated by one slow external operation with the root agent.
+Add a subagent only when the delegated work is independent, bounded, has a clear output contract, avoids frequent writes to shared mutable state, and has a measurable latency, context-isolation, or coverage benefit. Include the cost of preparing sufficient context, answering likely follow-ups, and integrating the result: if that cost approaches the work itself, keep it with the root.
+
+Tool availability is not a reason to delegate. Keep tightly coupled reasoning and implementation, ordered dependency chains, small tasks, shared-resource work, and tasks dominated by one slow external operation with the root agent.
 
 The root agent owns user communication, scope decisions, approval boundaries, final synthesis, validation reconciliation, and task closure.
 
@@ -35,7 +37,7 @@ When delegation is permitted by the host and the criteria above are met, delegat
 
 Carry the user's intended task through its verified completion within the established scope. Before asking for a decision or permission, follow `question_matrix.md` rather than treating a reference to approval as a fresh approval requirement.
 
-Treat a new message during work as steering the active task unless the user clearly cancels it or requests an incompatible replacement. Incorporate corrections and additions, answer side questions briefly, then continue the outstanding work. Preserve completed results, the original objective, and accepted constraints across interruptions or compaction. With current task context retained, update only the affected durable state; after material context loss or uncertain execution, recover from the current full plan and sufficient fresh observations rather than reconstructing the whole trajectory. Follow `planning_and_backlog.md` for that continuity/recovery distinction.
+Treat a new message during work as steering the active task unless the user clearly cancels it or requests an incompatible replacement. Incorporate corrections and additions, answer side questions briefly, then continue the outstanding work. Preserve completed results, the original objective, and accepted constraints across interruptions or compaction. With current task context retained, update only the affected durable state; after material context loss or uncertain execution, recover from the current full plan, current repository state, and relevant durable artifacts rather than reconstructing the execution transcript. Follow `planning_and_backlog.md` for that continuity/recovery distinction.
 
 Make progress updates and handoff concise and outcome-led. Explain the result, material decisions, validation evidence, and remaining work in plain language; use lists or tables when they improve comparison or sequencing. Preserve the user's requested detail and complete evidence, linking durable artifacts rather than repeating logs or successful checks.
 
@@ -58,7 +60,7 @@ Do not spend model turns waiting. A periodic workflow should run a bounded deter
 
 Keep approvals, semantic decisions, native-artifact validation, and final evidence review as direct root-agent actions.
 
-Batch independent or predictably dependent deterministic operations through an existing native mechanism when attribution, failure state, approvals, and required evidence remain intact. Stop when the declared result and required evidence are sufficient; an available extra read, tool, or delegation is not a reason to continue. Do not impose a universal counter or metadata envelope on ordinary tool calls outside an existing tool-specific output or safety contract.
+Batch independent or predictably dependent deterministic operations through existing command pipelines, scripts, repository validation helpers, native tool batching, or Programmatic Tool Calling when supported and eligible. Use a bounded utility or explorer only when the stage still needs limited semantic interpretation. Preserve attribution, partial failures, approvals, and required evidence, then return one compact result to the root. Stop when the declared result and required evidence are sufficient; an available extra read, tool, or delegation is not a reason to continue. Do not impose a universal counter or metadata envelope on ordinary tool calls outside an existing tool-specific output or safety contract.
 
 ## Programmatic Tool Route
 
@@ -115,13 +117,13 @@ Require bounded input, a fixed output schema, no scope expansion, no child agent
 
 Use an explorer for independent read-heavy work such as codebase mapping, documentation review, large-file inspection, evidence collection, or test/log summarization.
 
-Give it a bounded path scope and require file references plus distilled findings. Keep it read-only. Do not let it edit workflow state or paste unbounded raw output into the root context.
+Give it a bounded, self-contained path scope and require file references plus distilled findings. Every referenced input or artifact path must be accessible in the worker's environment; otherwise include the needed excerpt or keep the work with the root. Keep it read-only. Do not let it edit workflow state or paste unbounded raw output into the root context.
 
 ## Standard Worker Route
 
 Use a standard worker for bounded multi-step analysis or implementation when ownership can be isolated to specific files or a subsystem.
 
-Give it the smallest necessary permissions, explicit owned paths, local validation, and a required diff/validation summary. Run standard workers in parallel only when their write sets and mutable resources do not overlap.
+Give it the smallest necessary permissions, explicit owned paths, local validation, and a self-contained packet with the decisions and repository facts needed for the slice. Run standard workers in parallel only when their write sets and mutable resources do not overlap.
 
 ## Review Route
 
@@ -158,14 +160,15 @@ Only the root agent writes:
 
 A subagent may return a proposed patch or evidence, but the root agent reconciles it against current shared state before applying or accepting it.
 
-An external orchestrator launching or relaying an agent does not transfer the established root's ownership automatically. A child or remote session may have a different workspace, loaded instructions, task context, and file access; provide the necessary task-local inputs explicitly and keep one plan writer for the same scope.
+An external orchestrator launching or relaying an agent does not transfer the established root's ownership automatically. A child or remote session may have a different workspace, loaded instructions, task context, and file access; provide the necessary task-local inputs explicitly and keep one plan writer for the same scope. Express this as a context and ownership outcome, not as a requirement for a particular fork, session, or provider API.
 
 ## Subagent Contract
 
 Every delegation states:
 
 - bounded objective and scope
-- inputs and allowed paths
+- acceptance criteria and relevant accepted decisions
+- required context, inputs, accessible artifact paths, and allowed paths in the repository
 - read/write permissions
 - capability/model profile name
 - required output schema and evidence
@@ -176,7 +179,9 @@ Every delegation states:
 
 Do not leak the expected answer or a hidden diagnosis into an independent evaluation prompt. Give raw artifacts and the minimum task-local context needed for transferable validation.
 
-Delegate only work that is necessary and independently semantic with a concrete benefit. Do not delegate duplicate reading or create a plan controller whose only purpose is to recheck unchanged shared state. Consume the returned findings, scope, evidence, and limits without replaying the worker's full trajectory; the root still verifies applicability and performs required independent or final review. A return to the same root with current context is a continuity event, not a recovery or ownership handoff by itself.
+Require the worker to return compact status, completed work or findings, changed files when applicable, checks run, remaining blockers or risks, and accessible evidence or artifact paths. If a required input is missing or inaccessible, it reports the concrete blocker rather than reconstructing scope or guessing.
+
+Delegate only work that is necessary and independently semantic with a concrete benefit. Do not delegate duplicate reading or create a plan controller whose only purpose is to recheck unchanged shared state. Consume the returned findings, scope, evidence, and limits without replaying the worker's full trajectory; inspect detailed transcripts or logs only to resolve a concrete uncertainty. Worker completion is not final acceptance: the root verifies applicability, reconciles conflicts, integrates the result, and performs required independent or final review. A return to the same root with current context is a continuity event, not a recovery or ownership handoff by itself.
 
 ## Monitoring And Long-Running Work
 

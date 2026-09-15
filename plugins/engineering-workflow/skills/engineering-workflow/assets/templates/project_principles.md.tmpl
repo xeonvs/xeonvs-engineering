@@ -22,7 +22,9 @@ Convert a recurring failure class into one canonical invariant, a reachable task
 <!-- ew:invariant id="workflow.efficient-execution" -->
 ### Efficient Execution
 
-Preserve correctness, safety, explicit requirements, and required evidence before optimizing calls or output. Use bounded reconnaissance and focused inspection, but fully ingest sources needed for exact edits; prefer repository-native automation and avoid unrelated work. Maintain affected durable state as facts change before dependent actions or handoff, reuse still-current task context, and do not create a periodic model loop that rewrites or rechecks unchanged state.
+Preserve correctness, safety, explicit requirements, and required evidence before optimizing calls or output. Use bounded reconnaissance and focused inspection, but fully ingest sources needed for exact edits; prefer repository-native automation and avoid unrelated work. The root owns intent, plan, integration, final verification, and a current working representation of the task. Keep tightly coupled work with the root; give independent workers a bounded self-contained packet and require a compact result with findings, checks, blockers, and accessible artifact paths.
+
+Treat raw command output, searches, temporary diagnostics, and large logs as transient evidence that may stay outside root context. Preserve user constraints, accepted decisions, invariants, important verified facts, implementation state, blockers, and ordered remaining work as durable knowledge in `PLANS.md` or the appropriate repository owner before dependent work. Recover after context loss from the current plan, repository state, and relevant durable artifacts rather than reconstructing the full execution transcript. Do not create periodic state-maintenance loops or artifacts for observations that have no continuing value.
 
 <!-- ew:invariant id="workflow.evidence-driven-completion" -->
 ### Evidence-Driven Completion

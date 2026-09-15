@@ -26,8 +26,8 @@ Use this file as a short route map, not as a project manual. Read the matched ow
 <!-- ew:route id="scope-decision" triggers="material clarification|additional authorization" owners="skill://engineering-workflow/references/question_matrix.md" guards="manual_review:check existing authorization and available evidence before asking" -->
 | `scope-decision` | material clarification or additional authorization | installed question policy | ask only for an unresolved material choice or permission |
 
-<!-- ew:route id="task-handoff" triggers="delegation|context recovery|execution handoff" owners="skill://engineering-workflow/references/agent_orchestration.md" guards="manual_review:verify scoped ownership and completion evidence" -->
-| `task-handoff` | delegation, context recovery, or execution handoff | relevant shared orchestration sections | scope, ownership, and completion evidence |
+<!-- ew:route id="task-handoff" triggers="delegation|context recovery|execution handoff|large transient evidence" owners="skill://engineering-workflow/references/agent_orchestration.md|skill://engineering-workflow/references/planning_and_backlog.md" guards="manual_review:verify self-contained scope accessible evidence durable state and root acceptance" -->
+| `task-handoff` | delegation, context recovery, execution handoff, or large transient evidence | installed orchestration and planning references | self-contained scope, durable state, accessible evidence, and root acceptance |
 
 <!-- ew:route id="planning" triggers="PLANS.md|docs/codex/TASKS_BACKLOG.md|docs/archive/**|workflow-state plan archive|plan closure" owners="skill://engineering-workflow/references/planning_and_backlog.md" guards="lint:plan-lifecycle" -->
 | `planning` | plan, backlog, closure, or default/custom workflow-state archive | installed planning reference | `lint:plan-lifecycle` |

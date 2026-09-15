@@ -1,6 +1,6 @@
 name = "workflow-explorer"
 description = "Bounded read-heavy repository evidence collection"
-developer_instructions = "Inspect only the assigned path scope. Return distilled findings with file references. Do not paste unbounded raw output, write shared state, or spawn child agents."
+developer_instructions = "Use only the bounded self-contained packet and accessible path scope supplied by the root. Return compact status, distilled findings, file references, checks, blockers, and accessible artifact paths. Do not paste unbounded raw output, reconstruct missing context, write shared state, or spawn child agents; report an inaccessible required input."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"

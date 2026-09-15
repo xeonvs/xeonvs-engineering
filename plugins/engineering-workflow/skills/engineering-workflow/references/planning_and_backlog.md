@@ -21,12 +21,13 @@ Stable contract markers:
 3. Requirement And Queue State
 4. Full Active Plan Schema
 5. Current Operational State
-6. Continuity And Recovery Reconciliation
-7. Closure State Machine
-8. Compact And Archive Dispositions
-9. Index Policy
-10. Backlog Lifecycle
-11. Failure And Recovery
+6. Evidence And Durable Knowledge
+7. Continuity And Recovery Reconciliation
+8. Closure State Machine
+9. Compact And Archive Dispositions
+10. Index Policy
+11. Backlog Lifecycle
+12. Failure And Recovery
 
 ## Planning Boundary
 
@@ -66,6 +67,18 @@ After exploration, retain the conclusion and the evidence or rationale needed to
 
 Native memory, session summaries, and task lists do not replace the current full active plan or verified evidence. They also do not require a mirror or comparison entry after every step. This is not permission to disable native memory, ignore applicable host instructions, or remove user-owned history; preserve those facilities without turning them into another required workflow-state loop.
 
+## Evidence And Durable Knowledge
+
+Keep the root conversation context as a working representation of the task, not as its only durable memory. It should contain the current intent, accepted decisions, implementation and integration state, unresolved blockers, and the next safe action needed for model judgment.
+
+Treat raw command output, search matches, temporary stack traces, intermediate diagnostics, and large test logs as transient evidence. They may be summarized, stored outside the root context, or reread when needed. Before discarding or shortening them, preserve any required failure evidence, result provenance, and the conclusion needed to verify or recover the task.
+
+Bound output before it enters root context: prefer status summaries, diff statistics, selected hunks, or focused log queries while the complete source remains available in the repository or a protected artifact. If transport truncates, identify and read only the missing task-relevant portion instead of replaying the whole output.
+
+Treat user constraints, accepted decisions, architectural invariants, important verified facts, current implementation state, unresolved blockers, and ordered remaining work as durable knowledge. Record a material change before dependent work in its existing owner: task state and links in `PLANS.md`, architectural rationale in the repository's architecture owner, and specialized operational or validation facts in their appropriate durable artifact. Do not copy the same rule or fact into several owners.
+
+Do not create a repository artifact merely to retain every transient observation. Use a protected task-owned artifact when output volume, privacy, recovery, or an explicit evidence requirement justifies it, and link or summarize only the portion needed by the plan and current model decision.
+
 ## Full Active Plan Schema
 
 Every active repository-changing plan contains:
@@ -99,7 +112,7 @@ The fidelity check confirms complete requirements, sources, decisions, queue cov
 
 During continuous work by the same root with the current task context available, an ordinary milestone or subagent return requires reconciling the result and only the affected requirements, queue, validation, risks, and resume state. The event alone does not require rereading the entire plan, backlog, indexes, instruction owners, and evidence, or repeating the repository audit. A subagent return does not transfer task or plan ownership to a new root.
 
-After actual context compaction that lost material task context, an interruption with uncertain outcome, a new session, or handoff to another root, read the current full active plan and obtain sufficient fresh observations of the repository and relevant environment before changing code. Recover the current state and first safe action; do not reconstruct the complete chat trajectory or repeat closed research by default. Long-lived chat or global memory alone does not prove that the current task context is intact.
+After actual context compaction that lost material task context, an interruption with uncertain outcome, a new session, or handoff to another root, read the current full active plan, inspect current repository state, and use the relevant durable artifacts before changing code. Recover the current state and first safe action; do not reconstruct the complete chat or execution trajectory or repeat closed research by default. Consult focused transient logs only when those sources leave a concrete uncertainty. Long-lived chat or global memory alone does not prove that the current task context is intact.
 
 Changed requirements, material repository or external drift, concurrent edits, unavailable context, or an operation with uncertain terminal state expands reconciliation only as needed to resolve that uncertainty. An unchanged `HEAD` does not prove dirty content or an external system is unchanged. Verify terminal evidence before retrying and never repeat a side-effecting action blindly.
 
