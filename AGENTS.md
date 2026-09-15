@@ -6,6 +6,13 @@ Use `PLANS.md` as active execution state. Keep the catalog limited to metadata, 
 
 ## Maintainer workflow
 
+- For delegation, context recovery, or large transient output, load the installed
+  `engineering-workflow` orchestration and planning references. Keep intent,
+  decisions, integration state, blockers, and the next action with the root;
+  place detailed durable knowledge in `PLANS.md` or its repository owner. Give
+  workers bounded self-contained inputs and require compact findings, checks,
+  blockers, and accessible evidence paths. Read raw logs only for a concrete
+  unresolved question.
 - For sync-policy or validator changes, inspect the matching script and tests;
   for catalog imports, inspect provenance and the exact generated bundle diff;
   for documentation-only changes, inspect affected instructions and links.
