@@ -88,6 +88,8 @@ IGNORED_DIRS = {
     ".idea",
     ".vscode",
 }
+AUDIT_FALLBACK_MAX_ENTRIES = 20_000
+AUDIT_FALLBACK_MAX_DEPTH = 32
 DOC_SUFFIXES = {".md", ".rst", ".txt"}
 TEXT_LIKE_SUFFIXES = DOC_SUFFIXES | {
     ".py",
@@ -211,19 +213,129 @@ PRIVACY_REVIEW_ELIGIBLE_TYPES = frozenset(
 )
 
 
-def _iter_relevant_files(root: Path) -> Iterable[Path]:
-    for path in root.rglob("*"):
+def _explicit_audit_paths(root: Path) -> list[Path]:
+    relative_paths = {
+        *CANONICAL_FILES.values(),
+        *OPTIONAL_FILES.values(),
+        *LEGACY_COMPAT_FILES,
+        STATE_MANIFEST_PATH,
+        ".codex/config.toml",
+    }
+    return sorted(
+        (
+            root / relative
+            for relative in relative_paths
+            if (root / relative).is_file() or (root / relative).is_symlink()
+        ),
+        key=lambda path: path.relative_to(root).as_posix(),
+    )
+
+
+def _safe_inventory_path(root: Path, raw_path: bytes) -> Path | None:
+    relative = Path(os.fsdecode(raw_path))
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    path = root / relative
+    if path.is_symlink() or path.is_file():
+        return path
+    return None
+
+
+def _git_audit_inventory(root: Path) -> tuple[list[Path], dict] | None:
+    git_marker = root / ".git"
+    if git_marker.is_symlink() or not (git_marker.is_dir() or git_marker.is_file()):
+        return None
+    completed = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--"],
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        return None
+    raw_paths = [item for item in completed.stdout.split(b"\0") if item]
+    files = [path for item in raw_paths if (path := _safe_inventory_path(root, item)) is not None]
+    files.extend(_explicit_audit_paths(root))
+    unique_files = sorted(set(files), key=lambda path: path.relative_to(root).as_posix())
+    return unique_files, {
+        "mode": "git",
+        "candidate_count": len(raw_paths),
+        "included_count": len(unique_files),
+        "explicit_path_count": len(_explicit_audit_paths(root)),
+        "truncated": False,
+        "omission_reasons": [],
+    }
+
+
+def _bounded_filesystem_audit_inventory(root: Path) -> tuple[list[Path], dict]:
+    files = set(_explicit_audit_paths(root))
+    stack: list[tuple[Path, int]] = [(root, 0)]
+    entries_seen = 0
+    pruned_directory_count = 0
+    omission_reasons: set[str] = set()
+
+    while stack and entries_seen < AUDIT_FALLBACK_MAX_ENTRIES:
+        directory, depth = stack.pop()
         try:
-            rel = path.relative_to(root)
-        except ValueError:
+            entries = os.scandir(directory)
+        except OSError:
+            omission_reasons.add("unreadable_directory")
             continue
-        if any(part in IGNORED_DIRS for part in rel.parts):
-            continue
-        if path.is_symlink():
-            yield path
-            continue
-        if path.is_file():
-            yield path
+        with entries:
+            for entry in entries:
+                entries_seen += 1
+                if entries_seen > AUDIT_FALLBACK_MAX_ENTRIES:
+                    omission_reasons.add("entry_limit")
+                    break
+                path = Path(entry.path)
+                try:
+                    if entry.is_symlink():
+                        files.add(path)
+                        continue
+                    if entry.is_dir(follow_symlinks=False):
+                        if entry.name in IGNORED_DIRS:
+                            pruned_directory_count += 1
+                        elif depth >= AUDIT_FALLBACK_MAX_DEPTH:
+                            omission_reasons.add("depth_limit")
+                        else:
+                            stack.append((path, depth + 1))
+                        continue
+                    if entry.is_file(follow_symlinks=False):
+                        files.add(path)
+                except OSError:
+                    omission_reasons.add("unreadable_entry")
+
+    if stack:
+        omission_reasons.add("entry_limit")
+    unique_files = sorted(files, key=lambda path: path.relative_to(root).as_posix())
+    return unique_files, {
+        "mode": "bounded_filesystem",
+        "candidate_count": entries_seen,
+        "included_count": len(unique_files),
+        "truncated": bool(omission_reasons & {"entry_limit", "depth_limit"}),
+        "omission_reasons": sorted(omission_reasons),
+        "entry_limit": AUDIT_FALLBACK_MAX_ENTRIES,
+        "depth_limit": AUDIT_FALLBACK_MAX_DEPTH,
+        "pruned_directory_count": pruned_directory_count,
+    }
+
+
+def discover_audit_files(root: Path) -> tuple[list[Path], dict]:
+    """Return Git-owned audit inputs or a bounded, non-following filesystem fallback."""
+    git_marker = root / ".git"
+    git_root_declared = not git_marker.is_symlink() and (git_marker.is_dir() or git_marker.is_file())
+    git_inventory = _git_audit_inventory(root)
+    if git_inventory is not None:
+        return git_inventory
+    files, metadata = _bounded_filesystem_audit_inventory(root)
+    metadata["fallback_reason"] = "git_inventory_failed" if git_root_declared else "not_git_repository"
+    if git_root_declared:
+        metadata["omission_reasons"] = sorted({*metadata["omission_reasons"], "git_inventory_failed"})
+    return files, metadata
+
+
+def _iter_relevant_files(root: Path) -> Iterable[Path]:
+    files, _metadata = discover_audit_files(root)
+    yield from files
 
 
 def _read_text(path: Path) -> str:
@@ -885,8 +997,8 @@ def classify_command_safety(command: str) -> str:
     return str(classify_command_risks(command)["classification"])
 
 
-def recommended_checks(root: Path) -> dict[str, list[str]]:
-    relevant_files = list(_iter_relevant_files(root))
+def recommended_checks(root: Path, relevant_files: list[Path] | None = None) -> dict[str, list[str]]:
+    relevant_files = relevant_files if relevant_files is not None else list(_iter_relevant_files(root))
     read_only = ["git status --short", "git diff --check", "git ls-files"]
     copy_only: list[str] = []
     if (root / "Makefile").exists():
@@ -1063,7 +1175,7 @@ def audit_repo(root: Path) -> dict:
     from instruction_contract import check_instruction_contract
     from plan_lifecycle import check_archive_indexes
 
-    relevant_files = list(_iter_relevant_files(root))
+    relevant_files, discovery = discover_audit_files(root)
     docs = [path for path in relevant_files if path.suffix.lower() in DOC_SUFFIXES]
     canonical_presence = {key: (root / rel_path).exists() for key, rel_path in CANONICAL_FILES.items()}
     optional_presence = {key: (root / rel_path).exists() for key, rel_path in OPTIONAL_FILES.items()}
@@ -1098,6 +1210,7 @@ def audit_repo(root: Path) -> dict:
 
     return {
         "root": str(root.resolve()),
+        "discovery": discovery,
         "repo_maturity": repo_maturity,
         "file_count": len(relevant_files),
         "doc_count": len(docs),
@@ -1111,7 +1224,7 @@ def audit_repo(root: Path) -> dict:
         "prompt_injection_risks": prompt_injection_risks,
         "retained_history": retained_history,
         "dominant_language": _detect_language(language_sources),
-        "recommended_validation": recommended_checks(root),
+        "recommended_validation": recommended_checks(root, relevant_files),
         "instruction_contract": instruction_contract,
         "archive_indexes": archive_indexes,
     }
