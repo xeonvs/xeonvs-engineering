@@ -2,7 +2,7 @@
 name: engineering-workflow
 description: Set up, audit, or upgrade repository workflow instructions and planning. Use for workflow changes or explicit skill refresh/update; ordinary repository work does not invoke migration.
 metadata:
-  version: 0.9.6
+  version: 0.9.7
 ---
 
 # Engineering Workflow
@@ -47,7 +47,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 ## Core Workflow
 
 1. Reuse the established invoking host. Read `references/platform_compatibility.md` when host or capability behavior is uncertain; select a Codex or Claude Code branch only when the actual host establishes it, otherwise use the shared agent-neutral fallback. In Claude Code, explicitly read the applicable target `AGENTS.md` files rather than assuming automatic discovery.
-2. For scaffold, merge, or workflow-structure verification, run `scripts/repo_audit.py` to establish missing maturity, ownership, compatibility, history, injection, and validation facts. Reuse an applicable audit already available. For target upgrade, follow `references/target_workflow_upgrade.md`, including its customized-owner adoption review before prompt apply; the upgrader owns the report-first audit, so do not add a duplicate standalone audit. Installed-skill refresh/update follows `references/skill_update.md` without auditing or migrating the target repository. A narrow explanation uses only the relevant owners.
+2. For scaffold, merge, or workflow-structure verification, run `scripts/repo_audit.py` with `<repo> --summary --full-report <protected-task-path>` so the model receives bounded status and counts while complete evidence remains available at the reported path. Reuse an applicable audit already available; use the compatible default full-JSON form only when a non-agent consumer requires it. Git-backed discovery includes tracked and non-ignored untracked files; non-Git discovery is explicitly bounded and reports omissions under `references/repo_maturity_matrix.md`. For target upgrade, follow `references/target_workflow_upgrade.md`, including its customized-owner adoption review before prompt apply; the upgrader owns the report-first audit, so do not add a duplicate standalone audit. Installed-skill refresh/update follows `references/skill_update.md` without auditing or migrating the target repository. A narrow explanation uses only the relevant owners.
 3. For repository-changing work, read `references/planning_and_backlog.md`, create or update the full active plan as the first write, and pass its fidelity gate.
 4. For instruction changes, read `references/instruction_lifecycle.md`; preserve one canonical owner per invariant, keep target `AGENTS.md` route-only, and keep pitfalls non-normative.
 5. Use exact canonical paths, the state manifest, or managed-section markers as ownership evidence. Treat unknown files as protected until evidence or user direction resolves ownership.
@@ -75,7 +75,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 
 ## Scripts
 
-- `scripts/repo_audit.py`: structured read-only workflow audit.
+- `scripts/repo_audit.py`: structured read-only workflow audit with compatible full JSON and opt-in compact output backed by a complete report file.
 - `scripts/assess_programmatic_stage.py`: validate model-established stage facts and render bounded Programmatic Tool Calling instructions.
 - `scripts/plan_bootstrap.py`: plan and artifact-action proposal; read-only mode emits no plan requirement.
 - `scripts/instruction_contract.py`: validate invariant owners, routes, incident links, and guards.
