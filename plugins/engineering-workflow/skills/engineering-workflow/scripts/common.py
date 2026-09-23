@@ -201,16 +201,7 @@ PRIVACY_PATTERNS = {
     "url_with_credentials": re.compile(r"https?://[^\s/@:]+:[^\s/@]+@[^\s/]+", re.IGNORECASE),
 }
 
-PRIVACY_REVIEW_CONTRACT_VERSION = 1
-PRIVACY_REVIEW_ELIGIBLE_TYPES = frozenset(
-    {
-        "credential_like_assignment",
-        "environment_secret_assignment",
-        "bearer_token",
-        "email",
-        "internal_hostname",
-    }
-)
+PRIVACY_REVIEW_CONTRACT_VERSION = 2
 
 
 def _explicit_audit_paths(root: Path) -> list[Path]:

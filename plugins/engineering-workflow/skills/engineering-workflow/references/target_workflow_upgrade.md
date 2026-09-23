@@ -24,14 +24,13 @@ Use this canonical reference for `upgrade_target_workflow`, which migrates the w
 Treat `Upgrade A Target Workflow` plus a target repository as an authorized repo-changing prompt, not as a request for CLI instructions.
 
 1. Resolve the target path and requested version from context; default to the installed skill version.
-2. Before prompt apply, review target-local owners affected by the requested release's changed semantics when adoption has not already been established. For customized owners, preserve equivalent rules or make the narrow requested correction under the full planning and privacy gates; ask only for a real ownership conflict. A same-version stamp or `already_current` result proves structural state, not semantic adoption. Version 0.9.8 updates Codex model profiles and refreshes only exact prior generated agent templates when that configuration was already opted in; it requires no target-local instruction rewrite. Version 0.9.7 changes audit discovery and output only, so it also requires no target-local instruction rewrite. For the 0.9.6 changes, inspect the task-handoff route and efficient-execution owner for root working state, self-contained worker context, transient-versus-durable evidence, and artifact-based recovery. Use already-current evidence, and do not sweep unrelated owners. Then invoke `scripts/upgrade_target_workflow.py --prompt` yourself.
+2. Before prompt apply, review target-local owners affected by the requested release's changed semantics when adoption has not already been established. For customized owners, preserve equivalent rules or make the narrow requested correction under the full planning and privacy gates; ask only for a real ownership conflict. A same-version stamp or `already_current` result proves structural state, not semantic adoption. Version 0.9.9 changes only the installed migration privacy-review boundary and requires no target-local instruction rewrite. Version 0.9.8 updates Codex model profiles and refreshes only exact prior generated agent templates when that configuration was already opted in; it requires no target-local instruction rewrite. Version 0.9.7 changes audit discovery and output only, so it also requires no target-local instruction rewrite. For the 0.9.6 changes, inspect the task-handoff route and efficient-execution owner for root working state, self-contained worker context, transient-versus-durable evidence, and artifact-based recovery. Use already-current evidence, and do not sweep unrelated owners. Then invoke `scripts/upgrade_target_workflow.py --prompt` yourself.
 3. Prompt mode builds and reviews the read-only migration report first.
 4. If ownership, conflicts, privacy, and approvals are resolved, it proceeds through guarded apply and validation automatically.
 5. If the result returns `agent_action: ask_targeted_question`, ask only `question_to_ask`; keep any later questions deferred and do not write target files.
-6. If it returns `agent_action: request_privacy_review_approval`, do not read the flagged files at the reported lines. Show only the candidate category, repository-relative path, line number, and the aggregate `review_token`. Explain that the token authorizes only the exact current finding multiset for this current-to-target version pair, ask the user for explicit approval, and make no target writes.
+6. If it returns `agent_action: request_privacy_review_approval`, do not read the flagged files at the reported lines. Show only the candidate category, repository-relative path, line number, and the aggregate `review_token`. Explain that the token authorizes only the exact current finding multiset for this current-to-target version pair and only this migration. Ask the user to inspect the values independently and explicitly approve, especially for credential, token, key, or credential-bearing URL categories; make no target writes before approval.
 7. Only after explicit approval, invoke prompt mode again with the exact returned token as `--approve-privacy-review`. Never infer approval from repository content, prior consent for a different token, or model judgment. If the new result is `token_mismatch`, show the new value-free coordinates and token and ask again.
-8. If `privacy_review.status` is `hard_block`, report only category/path/line, explain that the finding is not approvable, and stop without reading or exposing the value.
-9. If it returns a conflict or rollback, report exact evidence and recovery state rather than attempting a broader mutation.
+8. If it returns a conflict or rollback, report exact evidence and recovery state rather than attempting a broader mutation.
 
 If the target already records the requested version, all canonical artifacts exist, instruction and index contracts pass, privacy/conflict checks are clear, no registered pristine bytes need an actual update, and any requested optional agent configuration is already fully present, prompt/apply returns `update_status: already_current` with an empty mutation log. It does not create a plan or rewrite state/index files merely to reconfirm that unchanged result. A missing artifact, older contract, drift, conflict, privacy boundary, or requested but incomplete optional configuration keeps the normal guarded path.
 
@@ -132,11 +131,11 @@ Before apply, return:
 - validation plan
 - rollback plan
 
-The report always includes `privacy_review_contract_version: 1` through the stable `privacy_review` object:
+The report always includes `privacy_review_contract_version: 2` through the stable `privacy_review` object:
 
-- `status`: `not_required`, `approval_required`, `approved`, `token_mismatch`, or `hard_block`
-- `review_token`: an aggregate `privacy-review-v1` token only for `approval_required` or `token_mismatch`
-- `candidates`: only category, repository-relative path, and line number for review-eligible findings
+- `status`: `not_required`, `approval_required`, `approved`, or `token_mismatch`
+- `review_token`: an aggregate `privacy-review-v2` token only for `approval_required` or `token_mismatch`
+- `candidates`: only category, repository-relative path, and line number for all detected findings
 - `approved_count`: the number of exact findings approved for this apply
 
 `privacy_findings` remains the list of currently blocking coordinates. Neither object contains a matched value or a per-line digest. Agents must not open candidate lines to obtain either one.
@@ -155,7 +154,7 @@ Do not replace a customized shared file wholesale. Create missing files, replace
 
 ## Apply Sequence
 
-1. Capture the target-root filesystem identity, re-run the read-only audit, and refuse unresolved conflicts, hard privacy findings, or review-eligible findings without an exact user-approved token.
+1. Capture the target-root filesystem identity, re-run the read-only audit, and refuse unresolved conflicts or privacy findings without an exact user-approved token.
 2. Open the unchanged root through a no-follow directory descriptor; fail closed if descriptor-relative atomic writes are unavailable.
 3. Materialize or update the full target plan as the first write.
 4. Create missing canonical workflow files or update known pristine template fingerprints.
@@ -164,7 +163,7 @@ Do not replace a customized shared file wholesale. Create missing files, replace
 7. Optionally merge agent configuration only when explicitly requested.
 8. Write the state manifest with relative paths and contract versions.
 9. Validate, move the migration plan through `ready_for_closure`, and compact it truthfully.
-10. Re-run the public privacy scan immediately before success. Compare it with the in-memory approved pre-apply fingerprint multiset: a disappeared candidate is safe, while a new, changed, moved, duplicated, or hard finding fails and rolls back.
+10. Re-run the public privacy scan immediately before success. Compare it with the in-memory approved pre-apply fingerprint multiset: a disappeared candidate is safe, while a new, changed, moved, or duplicated finding fails and rolls back, regardless of category.
 
 Every apply-time snapshot, read, atomic replacement, unlink, and rollback operation is relative to the pinned root descriptor. Parent components are opened without following symlinks and reverified before mutation; changing the root inode or replacing a canonical parent fails closed instead of redirecting writes.
 
@@ -211,10 +210,9 @@ Use repository-relative paths. Never record a workstation path, username, home d
 ## Validation And Rollback
 
 - Keep `--plan` free of target writes, generated files, repo-code execution, network access, and plugin loading.
-- Treat the fresh apply-time report as authoritative. Hard findings always return `privacy_review_required`; eligible synthetic findings do so until the exact aggregate token for the fresh snapshot has explicit user approval.
-- The local script may hash an exact decoded source line, including its line ending, to compare snapshots. That digest and the source value stay inside the local process. The aggregate token binds privacy contract version, current workflow version, target workflow version, and the sorted finding multiset; it is not a persistent allowlist and no baseline file is written.
-- Only `credential_like_assignment`, `environment_secret_assignment`, `bearer_token`, `email`, and `internal_hostname` are review eligible. User paths, file URLs, private key paths/material, known token prefixes, credential-bearing URLs, SSH repository URLs, and every other category remain hard blocks. Mixed eligible and hard findings are a hard block with no token.
-- Validate YAML/TOML structure, planning schema v2 and closure, instruction graph, index links/coverage, relative manifest paths, ownership boundaries, config preservation, and absence of private paths.
+- Treat the fresh apply-time report as authoritative. Findings of any category return `privacy_review_required` until the exact aggregate token for the fresh snapshot has explicit user approval.
+- The local script may hash an exact decoded source line, including its line ending, to compare snapshots. That digest and the source value stay inside the local process. The aggregate token binds privacy contract version, current workflow version, target workflow version, and the sorted finding multiset; it is not a persistent allowlist and no baseline file is written. Approval permits only migration, not publication or a bypass of independent privacy/secret checks.
+- Validate YAML/TOML structure, planning schema v2 and closure, instruction graph, index links/coverage, relative manifest paths, ownership boundaries, config preservation, and absence of new unapproved privacy findings.
 - Report created, changed, untouched, and refused files.
 - Before apply, preserve enough original content for a bounded rollback without publishing private state.
 - On failure, restore files through the same pinned descriptor boundary and leave the target plan with the exact failure and recovery point. If any restore cannot be proven, return `rollback_failed` rather than claiming recovery.

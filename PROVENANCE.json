@@ -4,13 +4,13 @@
   "bundles": [
     {
       "name": "engineering-workflow",
-      "version": "0.9.8",
+      "version": "0.9.9",
       "source_repository": "https://github.com/xeonvs/codex-engineering-workflow",
       "source_policy": "latest-tag",
-      "source_ref": "v0.9.8",
-      "source_commit": "9a28224af9efc329ed420ddcbd25b1f0aa354565",
+      "source_ref": "v0.9.9",
+      "source_commit": "e73c8af994350ae0e463ab8856dff12b761f12ee",
       "source_path": "plugins/engineering-workflow",
-      "bundle_sha256": "df06c716221a780eb92d2570a2602ad8034e219194da52f9feb4135c24f6874c"
+      "bundle_sha256": "5aa3b74527d7cd4260ef90223222e3c2e998fae016b3c02919de676449f2e0f3"
     },
     {
       "name": "tgrep-search",

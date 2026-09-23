@@ -21,7 +21,6 @@ from common import (
     CANONICAL_FILES,
     IGNORED_DIRS,
     PRIVACY_REVIEW_CONTRACT_VERSION,
-    PRIVACY_REVIEW_ELIGIBLE_TYPES,
     STATE_MANIFEST_PATH,
     audit_repo,
     find_stale_completed_state,
@@ -181,7 +180,7 @@ def _privacy_review_token(
         "findings": canonical_findings,
     }
     digest = hashlib.sha256(
-        json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("utf-8")
     ).hexdigest()
     return f"privacy-review-v{PRIVACY_REVIEW_CONTRACT_VERSION}:{digest}"
 
@@ -193,9 +192,7 @@ def _evaluate_privacy_review(
     approved_token: str | None,
 ) -> tuple[dict[str, Any], list[dict[str, int | str]], Counter[PrivacyFingerprint]]:
     detailed = scan_public_tree_with_fingerprints(root)
-    eligible = [finding for finding in detailed if finding["type"] in PRIVACY_REVIEW_ELIGIBLE_TYPES]
-    hard = [finding for finding in detailed if finding["type"] not in PRIVACY_REVIEW_ELIGIBLE_TYPES]
-    candidates = [_public_privacy_finding(finding) for finding in eligible]
+    candidates = [_public_privacy_finding(finding) for finding in detailed]
     empty: Counter[PrivacyFingerprint] = Counter()
     if not detailed:
         return (
@@ -209,20 +206,7 @@ def _evaluate_privacy_review(
             [],
             empty,
         )
-    if hard:
-        return (
-            {
-                "contract_version": PRIVACY_REVIEW_CONTRACT_VERSION,
-                "status": "hard_block",
-                "review_token": None,
-                "candidates": candidates,
-                "approved_count": 0,
-            },
-            [_public_privacy_finding(finding) for finding in detailed],
-            empty,
-        )
-
-    fingerprints = Counter(_privacy_fingerprint(finding) for finding in eligible)
+    fingerprints = Counter(_privacy_fingerprint(finding) for finding in detailed)
     expected_review = _privacy_review_token(
         fingerprints,
         current_workflow_version,
@@ -262,9 +246,6 @@ def _new_privacy_findings(
     remaining = approved.copy()
     blocking: list[dict[str, int | str]] = []
     for finding in scan_public_tree_with_fingerprints(root):
-        if finding["type"] not in PRIVACY_REVIEW_ELIGIBLE_TYPES:
-            blocking.append(_public_privacy_finding(finding))
-            continue
         fingerprint = _privacy_fingerprint(finding)
         if remaining[fingerprint] > 0:
             remaining[fingerprint] -= 1
@@ -1685,7 +1666,7 @@ def main() -> int:
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.9.8")
+    parser.add_argument("--target-version", default="0.9.9")
     parser.add_argument("--include-agent-config", action="store_true")
     parser.add_argument(
         "--approve-privacy-review",

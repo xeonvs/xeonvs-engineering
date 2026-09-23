@@ -2,7 +2,7 @@
 name: engineering-workflow
 description: Set up, audit, or upgrade repository workflow instructions and planning. Use for workflow changes or explicit skill refresh/update; ordinary repository work does not invoke migration.
 metadata:
-  version: 0.9.8
+  version: 0.9.9
 ---
 
 # Engineering Workflow
@@ -16,7 +16,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 - `instruction_contract_version: 3`
 - `orchestration_contract_version: 3`
 - `platform_compatibility_version: 1`
-- `privacy_review_contract_version: 1`
+- `privacy_review_contract_version: 2`
 - `repo_change_plan: full_required`
 - `plan_mode_exit_materialization: required`
 - `direct_execution_materialization: required`
@@ -40,7 +40,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 - Repository workflow: `greenfield_scaffold`, `conservative_merge`, `read_only_verify`, `disposable_copy_verify`, or `upgrade_target_workflow`.
 - `Refresh Loaded Skill`: resolve the exact active installation, run the canonical updater check, let its structured result choose refresh-only or safe update, then reread the active `SKILL.md`. Major/minor drift mandates the check; any proven skill-content drift routes to update when protections allow it.
 - `Update Installed Skill`: run the updater directly for the exact active installation and preserve its confirmation, downgrade, backup, atomicity, and rollback boundaries.
-- `Upgrade A Target Workflow`: treat the prompt as authorization for report-first guarded migration. If the result returns `review_instruction_migration`, read the customized owner, preserve an equivalent rule or add only missing version-3 invariants/routes, then rerun the report; ask only for a genuine targeted ownership decision. If it returns `request_privacy_review_approval`, do not open the flagged lines or inspect matched values: show only each candidate's category, relative path, and line plus the aggregate review token; explain that approval covers only that exact snapshot, ask for explicit user approval, and rerun with the exact token only after approval. Never approve on the user's behalf. A `hard_block` has no approval path.
+- `Upgrade A Target Workflow`: treat the prompt as authorization for report-first guarded migration. If the result returns `review_instruction_migration`, read the customized owner, preserve an equivalent rule or add only missing version-3 invariants/routes, then rerun the report; ask only for a genuine targeted ownership decision. If it returns `request_privacy_review_approval`, do not open the flagged lines or inspect matched values: show only each candidate's category, relative path, and line plus the aggregate review token. Ask the user to inspect values locally and explicitly approve the exact snapshot before rerunning with the token; highlight credential, token, key, and credential-bearing URL risks. Never approve on the user's behalf or treat migration approval as permission to publish sensitive content.
 - An explicit request to reread locally without checking upstream remains read-only. Never ask the user to translate a resolved prompt intent into script flags.
 - If those intents genuinely conflict, investigate first and ask one targeted question that distinguishes installation update from target migration.
 
