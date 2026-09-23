@@ -24,7 +24,7 @@ Use this canonical reference for `upgrade_target_workflow`, which migrates the w
 Treat `Upgrade A Target Workflow` plus a target repository as an authorized repo-changing prompt, not as a request for CLI instructions.
 
 1. Resolve the target path and requested version from context; default to the installed skill version.
-2. Before prompt apply, review target-local owners affected by the requested release's changed semantics when adoption has not already been established. For customized owners, preserve equivalent rules or make the narrow requested correction under the full planning and privacy gates; ask only for a real ownership conflict. A same-version stamp or `already_current` result proves structural state, not semantic adoption. Version 0.9.7 changes audit discovery and output only, so it requires no target-local instruction rewrite. For the 0.9.6 changes, inspect the task-handoff route and efficient-execution owner for root working state, self-contained worker context, transient-versus-durable evidence, and artifact-based recovery. Use already-current evidence, and do not sweep unrelated owners. Then invoke `scripts/upgrade_target_workflow.py --prompt` yourself.
+2. Before prompt apply, review target-local owners affected by the requested release's changed semantics when adoption has not already been established. For customized owners, preserve equivalent rules or make the narrow requested correction under the full planning and privacy gates; ask only for a real ownership conflict. A same-version stamp or `already_current` result proves structural state, not semantic adoption. Version 0.9.8 updates Codex model profiles and refreshes only exact prior generated agent templates when that configuration was already opted in; it requires no target-local instruction rewrite. Version 0.9.7 changes audit discovery and output only, so it also requires no target-local instruction rewrite. For the 0.9.6 changes, inspect the task-handoff route and efficient-execution owner for root working state, self-contained worker context, transient-versus-durable evidence, and artifact-based recovery. Use already-current evidence, and do not sweep unrelated owners. Then invoke `scripts/upgrade_target_workflow.py --prompt` yourself.
 3. Prompt mode builds and reviews the read-only migration report first.
 4. If ownership, conflicts, privacy, and approvals are resolved, it proceeds through guarded apply and validation automatically.
 5. If the result returns `agent_action: ask_targeted_question`, ask only `question_to_ask`; keep any later questions deferred and do not write target files.
@@ -35,7 +35,7 @@ Treat `Upgrade A Target Workflow` plus a target repository as an authorized repo
 
 If the target already records the requested version, all canonical artifacts exist, instruction and index contracts pass, privacy/conflict checks are clear, no registered pristine bytes need an actual update, and any requested optional agent configuration is already fully present, prompt/apply returns `update_status: already_current` with an empty mutation log. It does not create a plan or rewrite state/index files merely to reconfirm that unchanged result. A missing artifact, older contract, drift, conflict, privacy boundary, or requested but incomplete optional configuration keeps the normal guarded path.
 
-The user may explicitly request report-only behavior; then invoke `--plan`. Runtime agent configuration remains opt-in through the user's prompt and `--include-agent-config`.
+The user may explicitly request report-only behavior; then invoke `--plan`. New runtime agent configuration remains opt-in through the user's prompt and `--include-agent-config`; a valid workflow state manifest recording an earlier opt-in carries that choice into subsequent upgrades.
 
 ## CLI Contract
 
@@ -170,15 +170,16 @@ Every apply-time snapshot, read, atomic replacement, unlink, and rollback operat
 
 ## Codex Configuration
 
-When configuration is not selected, existing Codex artifacts remain unchanged; their syntax or symbolic layout does not create a configuration-migration question. Public privacy findings and actual workflow-path conflicts still follow their own gates.
+When configuration has never been selected, existing Codex artifacts remain unchanged; their syntax or symbolic layout does not create a configuration-migration question. Public privacy findings and actual workflow-path conflicts still follow their own gates.
 
-When `--include-agent-config` is present:
+When `--include-agent-config` is present or the target's valid workflow state records a prior opt-in:
 
 - parse existing TOML before changing it
 - preserve unknown keys, custom profiles, and current `max_threads`
 - add `max_depth = 1` only when absent or already compatible
 - do not overwrite a conflicting explicit depth without a user decision
-- create optional agent files only under the explicit flag
+- create missing optional agent files only after the current or prior opt-in
+- replace an existing agent file only when its complete bytes match the registered prior generated template; preserve every customized model pin and instruction
 - show the exact config diff
 
 Never place Responses API-only fields in Codex TOML.

@@ -51,6 +51,7 @@ Use a tool, script, scheduler, hook, or harness layer instead of an LLM subagent
 - unambiguous JSON status reads
 - sorting, filtering, joining, ranking, aggregation, or deduplication
 - repeating one command
+- running a known shell command or test suite and reporting its exit status
 - bounded retries and backoff
 - deterministic stop conditions
 
