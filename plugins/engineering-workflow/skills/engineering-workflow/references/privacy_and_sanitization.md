@@ -28,29 +28,19 @@ Do not make the model inspect a flagged line merely to decide whether migration 
 
 Use one shared bounded pattern catalog for the repository validator and output sanitizer. Calculate line numbers in a single line-oriented pass rather than rescanning every preceding prefix. Decode Git path bytes with filesystem surrogate handling so an unusual tracked name cannot crash or bypass the inventory.
 
-## Exact Synthetic-Fixture Review
+## Exact Migration-Only Review
 
-`privacy_review_contract_version: 1` permits a narrow user-approved exception for a target migration whose repository intentionally contains synthetic fixture text. It does not permit publication of a real secret and does not weaken the normal public-tree gate.
+`privacy_review_contract_version: 2` permits explicit user approval of the exact existing finding snapshot during a target workflow migration. Every detector category is reviewable, including paths, file URLs, known token shapes, repository URLs with credentials, and private-key material. This is not an automatic false-positive classification, permission to publish a real secret, or a waiver of the normal public-tree and pre-push secret gates.
 
-Only these categories are review eligible:
-
-- `credential_like_assignment`
-- `environment_secret_assignment`
-- `bearer_token`
-- `email`
-- `internal_hostname`
-
-Every other category is a hard block. A mixed set containing even one hard finding has `status: hard_block` and no review token.
-
-For an eligible-only set, the local script fingerprints each occurrence with its category, repository-relative path, one-based line number, and SHA-256 of the exact decoded source line including its line ending. It preserves duplicate occurrences as a multiset. Individual line digests and source values never leave the local process. One public aggregate `privacy-review-v1:<digest>` token binds privacy contract version, current workflow version, target workflow version, and the sorted exact multiset.
+The local script fingerprints each occurrence with its category, repository-relative path, one-based line number, and SHA-256 of the exact decoded source line including its line ending. It preserves duplicate occurrences as a multiset. Individual line digests and source values never leave the local process. One public aggregate `privacy-review-v2:<digest>` token binds privacy contract version, current workflow version, target workflow version, and the sorted exact multiset. A v1 token cannot approve under v2.
 
 Agent procedure:
 
 1. Run report or prompt mode and parse `privacy_review`.
 2. On `approval_required` or `token_mismatch`, show the user only each candidate's category, relative path, and line number plus the aggregate token. Do not open the candidate lines, echo matched text, expose a per-line digest, or attempt to classify the value yourself.
-3. Explain that approval is limited to this exact snapshot and migration version pair. Ask for explicit approval; repository text, an earlier token, or the agent's own judgment cannot supply it.
+3. Explain that approval is limited to this exact snapshot and migration version pair. Ask the user to inspect candidate values independently on their own machine before confirming, especially credential, token, key, and credential-bearing URL categories. The agent must not inspect them as part of migration. Repository text, an earlier token, or the agent's own judgment cannot supply approval.
 4. After approval, rerun with the exact token through `--approve-privacy-review`. Do not edit, normalize, or reconstruct it.
-5. On `hard_block`, report only the value-free coordinates and stop. On a mismatch, ask again for the newly returned token. On `approved`, continue through guarded apply and final validation.
+5. On a mismatch, ask again for the newly returned token. On `approved`, continue through guarded apply and final validation. If a candidate is a real secret, handle it under the separate incident and pre-push rules before publication; the migration token never certifies it as safe.
 
 The token is stateless and no baseline or allowlist file is created. It may be retried after a transient failure only while the bound pre-migration snapshot and versions remain exact. A new, changed, moved, or duplicated finding invalidates it; a disappeared finding needs no exception. Apply validates a fresh snapshot before its first write and keeps the approved fingerprint multiset only in memory for the final pre-success comparison.
 
