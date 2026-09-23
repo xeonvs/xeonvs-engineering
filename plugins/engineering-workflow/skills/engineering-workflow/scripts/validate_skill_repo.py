@@ -508,21 +508,21 @@ def _validate_agent_profiles(repo_root: Path) -> list[str]:
             if field not in data:
                 issues.append(f"{path.name} is missing required field: {field}")
     utility = parsed.get("utility", {})
-    expected_utility_model = "gpt-" + "5.6-" + "terra"
+    expected_utility_model = "gpt-" + "6-luna"
     if utility.get("model") != expected_utility_model or utility.get("model_reasoning_effort") != "low":
         issues.append("Utility agent must use the current low-cost low-reasoning profile")
     if utility.get("sandbox_mode") != "read-only":
         issues.append("Utility agent must remain read-only")
     explorer = parsed.get("explorer", {})
-    if explorer.get("model") != expected_utility_model or explorer.get("model_reasoning_effort") != "medium":
+    if explorer.get("model") != "gpt-" + "6-sol" or explorer.get("model_reasoning_effort") != "medium":
         issues.append("Explorer agent must use the current balanced read-heavy profile")
     if explorer.get("sandbox_mode") != "read-only":
         issues.append("Explorer agent must remain read-only")
     reviewer = parsed.get("reviewer", {})
-    if reviewer.get("model") != "gpt-" + "6-astra":
+    if reviewer.get("model") != "gpt-" + "6-sol":
         issues.append("Reviewer agent must use the current Codex review model profile")
-    if reviewer.get("model_reasoning_effort") != "high" or reviewer.get("sandbox_mode") != "read-only":
-        issues.append("Reviewer agent must use high reasoning in read-only mode")
+    if reviewer.get("model_reasoning_effort") != "medium" or reviewer.get("sandbox_mode") != "read-only":
+        issues.append("Reviewer agent must use medium reasoning in read-only mode")
     reference = repo_root / "skill/engineering-workflow/references/agent_orchestration.md"
     if reference.exists():
         text = reference.read_text(encoding="utf-8")

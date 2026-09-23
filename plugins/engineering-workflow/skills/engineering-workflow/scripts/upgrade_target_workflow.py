@@ -95,6 +95,13 @@ LEGACY_PRISTINE_HASHES = {
     },
 }
 
+# Exact agent-template bytes shipped in 0.9.7. No customized target file is rewritten.
+PRIOR_AGENT_TEMPLATE_HASHES = {
+    "utility": "2f32f34a8c23d66c037abd0d1466f1eebc41ee52fd5e1e422470b7fbead4c210",
+    "explorer": "cf28d059b8bc28123a038d2f4c40fe24fe45e5623d2ee73c0e2b81f0a1d381b4",
+    "reviewer": "6182122fcec3d18b14acdabb644b750e58c5d2264d8b7a68eaf54644ef6db133",
+}
+
 
 def _content_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -102,6 +109,31 @@ def _content_hash(text: str) -> str:
 
 def _is_pristine_legacy(relative: str, text: str) -> bool:
     return _content_hash(text) in LEGACY_PRISTINE_HASHES.get(relative, set())
+
+
+def _is_pristine_prior_agent(name: str, text: str) -> bool:
+    return _content_hash(text) == PRIOR_AGENT_TEMPLATE_HASHES[name]
+
+
+def _agent_config_selected(root: Path, explicitly_selected: bool) -> bool:
+    if explicitly_selected:
+        return True
+    if _first_symlink_component(root, STATE_MANIFEST_PATH):
+        return False
+    state = _read(root / STATE_MANIFEST_PATH)
+    try:
+        declared, shared_paths = parse_manifest_path_list(state, "shared_paths")
+    except ValueError:
+        return False
+    expected = {".codex/config.toml"} | {f".codex/agents/{name}.toml" for name in ("utility", "explorer", "reviewer")}
+    return (
+        re.search(r"(?m)^schema_version:\s*2\s*$", state) is not None
+        and re.search(r"(?m)^skill_name:\s*engineering-workflow\s*$", state) is not None
+        and re.search(r"(?m)^mode:\s*upgrade_target_workflow\s*$", state) is not None
+        and re.search(r"(?m)^runtime_agent_config_managed:\s*true\s*$", state) is not None
+        and declared
+        and expected.issubset(shared_paths)
+    )
 
 
 class MigrationConflict(RuntimeError):
@@ -741,6 +773,10 @@ def _proposed_changes(root: Path, include_agent_config: bool) -> list[dict[str, 
                 changes.append(
                     {"path": path, "action": "create", "reason": "explicit optional agent configuration request"}
                 )
+            elif _is_pristine_prior_agent(name, _read(root / path)):
+                changes.append(
+                    {"path": path, "action": "update", "reason": "known pristine prior agent template fingerprint"}
+                )
     return changes
 
 
@@ -754,6 +790,7 @@ def build_migration_report(
     root = repo.resolve()
     if not root.is_dir():
         raise MigrationConflict("missing_repository", "Target repository does not exist")
+    include_agent_config = _agent_config_selected(root, include_agent_config)
     audit = audit_repo(root)
     conflicts = _scan_contract_conflicts(root, include_agent_config=include_agent_config)
     state_text = _read(root / STATE_MANIFEST_PATH)
@@ -919,7 +956,9 @@ def _already_current(report: dict[str, Any], include_agent_config: bool, root: P
     topology = report["detected_topology"]
     required_artifacts = ("root_agents", "plans", "backlog", "pitfalls", "principles", "state_manifest")
     pristine_update_pending = any(
-        change.get("reason") == "known pristine legacy template fingerprint" for change in report["proposed_changes"]
+        change.get("reason")
+        in {"known pristine legacy template fingerprint", "known pristine prior agent template fingerprint"}
+        for change in report["proposed_changes"]
     )
     return (
         report["success"]
@@ -1245,6 +1284,7 @@ def apply_migration(
         include_agent_config,
         approved_privacy_review,
     )
+    include_agent_config = report["include_agent_config"]
     privacy_review, privacy_findings, approved_fingerprints = _evaluate_privacy_review(
         root,
         report["current_workflow_version"],
@@ -1365,7 +1405,8 @@ def apply_migration(
                     write(".codex/config.toml", merged)
                 for name in ("utility", "explorer", "reviewer"):
                     relative = f".codex/agents/{name}.toml"
-                    if not secure.exists(relative):
+                    existing_agent = read(relative)
+                    if not existing_agent or _is_pristine_prior_agent(name, existing_agent):
                         write(
                             relative,
                             (AGENT_TEMPLATE_ROOT / f"{name}.toml.tmpl").read_text(encoding="utf-8"),
@@ -1533,6 +1574,7 @@ def execute_prompt_upgrade(
         include_agent_config,
         approved_privacy_review,
     )
+    include_agent_config = report["include_agent_config"]
     if report["required_user_questions"]:
         return {
             **report,
@@ -1643,7 +1685,7 @@ def main() -> int:
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.9.7")
+    parser.add_argument("--target-version", default="0.9.8")
     parser.add_argument("--include-agent-config", action="store_true")
     parser.add_argument(
         "--approve-privacy-review",
