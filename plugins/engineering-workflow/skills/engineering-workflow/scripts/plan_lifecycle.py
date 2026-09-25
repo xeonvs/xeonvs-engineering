@@ -782,13 +782,15 @@ def _compact_root(existing: str, title: str, archive_path: str | None) -> str:
         existing[match.start() : section_matches[index + 1].start() if index + 1 < len(section_matches) else None]
         for index, match in enumerate(section_matches)
     ]
-    old_entries = [
-        line
-        for section in sections
-        if section.splitlines()[0].strip() == "## Recently Completed"
-        for line in section.splitlines()[1:]
-        if re.match(r"^- \[x\]", line, re.IGNORECASE)
-    ]
+    old_entries: list[str] = []
+    for section in sections:
+        if section.splitlines()[0].strip() != "## Recently Completed":
+            continue
+        body = section.split("\n", 1)[1] if "\n" in section else ""
+        starts = list(re.finditer(r"(?im)^- \[x\].*$", body))
+        for index, match in enumerate(starts):
+            end = starts[index + 1].start() if index + 1 < len(starts) else len(body)
+            old_entries.append(body[match.start() : end].strip("\n"))
     suffix = f"; [full archived plan]({archive_path})" if archive_path else ""
     new_entry = f"- [x] {date.today().isoformat()}: Completed {title}{suffix}."
     entries = [new_entry, *[item for item in old_entries if item != new_entry]][:10]

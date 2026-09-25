@@ -2,7 +2,7 @@
 name: engineering-workflow
 description: Set up, audit, or upgrade repository workflow instructions and planning. Use for workflow changes or explicit skill refresh/update; ordinary repository work does not invoke migration.
 metadata:
-  version: 0.9.9
+  version: 0.9.10
 ---
 
 # Engineering Workflow
@@ -64,6 +64,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 - Host capability boundaries and verified Codex/Claude integrations: `references/platform_compatibility.md`
 - Programmatic tool routing, agent routing, and shared-state ownership: `references/agent_orchestration.md`
 - Current capability-to-model mapping: `references/model_profiles.md`
+- Claude Code project-agent model mapping after explicit opt-in: `references/claude_model_profiles.md`
 - Installed-skill refresh and update: `references/skill_update.md`
 - Target workflow migration: `references/target_workflow_upgrade.md`
 - Validation command and isolation policy: `references/validation_safety.md`

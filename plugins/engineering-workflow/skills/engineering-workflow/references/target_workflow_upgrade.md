@@ -16,15 +16,16 @@ Use this canonical reference for `upgrade_target_workflow`, which migrates the w
 10. Mutation Boundaries
 11. Apply Sequence
 12. Codex Configuration
-13. Workflow State Manifest
-14. Validation And Rollback
+13. Claude Code Configuration
+14. Workflow State Manifest
+15. Validation And Rollback
 
 ## Prompt Invocation
 
 Treat `Upgrade A Target Workflow` plus a target repository as an authorized repo-changing prompt, not as a request for CLI instructions.
 
 1. Resolve the target path and requested version from context; default to the installed skill version.
-2. Before prompt apply, review target-local owners affected by the requested release's changed semantics when adoption has not already been established. For customized owners, preserve equivalent rules or make the narrow requested correction under the full planning and privacy gates; ask only for a real ownership conflict. A same-version stamp or `already_current` result proves structural state, not semantic adoption. Version 0.9.9 changes only the installed migration privacy-review boundary and requires no target-local instruction rewrite. Version 0.9.8 updates Codex model profiles and refreshes only exact prior generated agent templates when that configuration was already opted in; it requires no target-local instruction rewrite. Version 0.9.7 changes audit discovery and output only, so it also requires no target-local instruction rewrite. For the 0.9.6 changes, inspect the task-handoff route and efficient-execution owner for root working state, self-contained worker context, transient-versus-durable evidence, and artifact-based recovery. Use already-current evidence, and do not sweep unrelated owners. Then invoke `scripts/upgrade_target_workflow.py --prompt` yourself.
+2. Before prompt apply, review target-local owners affected by the requested release's changed semantics when adoption has not already been established. For customized owners, preserve equivalent rules or make the narrow requested correction under the full planning and privacy gates; ask only for a real ownership conflict. A same-version stamp or `already_current` result proves structural state, not semantic adoption. Version 0.9.10 fixes custom archive index preservation and adds separately opted-in Claude project agents; it requires no target-local instruction rewrite. Version 0.9.9 changes only the installed migration privacy-review boundary and requires no target-local instruction rewrite. Version 0.9.8 updates Codex model profiles and refreshes only exact prior generated agent templates when that configuration was already opted in; it requires no target-local instruction rewrite. Version 0.9.7 changes audit discovery and output only, so it also requires no target-local instruction rewrite. For the 0.9.6 changes, inspect the task-handoff route and efficient-execution owner for root working state, self-contained worker context, transient-versus-durable evidence, and artifact-based recovery. Use already-current evidence, and do not sweep unrelated owners. Then invoke `scripts/upgrade_target_workflow.py --prompt` yourself.
 3. Prompt mode builds and reviews the read-only migration report first.
 4. If ownership, conflicts, privacy, and approvals are resolved, it proceeds through guarded apply and validation automatically.
 5. If the result returns `agent_action: ask_targeted_question`, ask only `question_to_ask`; keep any later questions deferred and do not write target files.
@@ -34,7 +35,7 @@ Treat `Upgrade A Target Workflow` plus a target repository as an authorized repo
 
 If the target already records the requested version, all canonical artifacts exist, instruction and index contracts pass, privacy/conflict checks are clear, no registered pristine bytes need an actual update, and any requested optional agent configuration is already fully present, prompt/apply returns `update_status: already_current` with an empty mutation log. It does not create a plan or rewrite state/index files merely to reconfirm that unchanged result. A missing artifact, older contract, drift, conflict, privacy boundary, or requested but incomplete optional configuration keeps the normal guarded path.
 
-The user may explicitly request report-only behavior; then invoke `--plan`. New runtime agent configuration remains opt-in through the user's prompt and `--include-agent-config`; a valid workflow state manifest recording an earlier opt-in carries that choice into subsequent upgrades.
+The user may explicitly request report-only behavior; then invoke `--plan`. Codex runtime agent configuration remains opt-in through the user's prompt and `--include-agent-config`; Claude Code project agents have a separate `--include-claude-agent-config` opt-in. A valid workflow state manifest recording either earlier choice carries only that choice into subsequent upgrades.
 
 ## CLI Contract
 
@@ -46,6 +47,7 @@ The user may explicitly request report-only behavior; then invoke `--plan`. New 
 - `--prompt`
 - `--target-version`
 - `--include-agent-config`
+- `--include-claude-agent-config`
 - `--approve-privacy-review`
 - `--format json`
 
@@ -70,6 +72,7 @@ Inspect:
 - `PLANS.md` and older execution-plan locations
 - backlog, incident catalog, project principles, compatibility instructions, and equivalent names
 - `.codex/config.toml` and `.codex/agents/*.toml`
+- `.claude/agents/workflow-{utility,explorer,reviewer}.md` when Claude configuration is requested or previously opted in
 - workflow state manifest and migration notes
 - external tracker references
 - repository-owned domain, product, architecture, QA, security, and operational documentation
@@ -160,7 +163,7 @@ Do not replace a customized shared file wholesale. Create missing files, replace
 4. Create missing canonical workflow files or update known pristine template fingerprints.
 5. Create/update managed navigation indexes without replacing unmarked repository prose.
 6. Validate the complete instruction graph and indexes; stop before version stamping on any finding.
-7. Optionally merge agent configuration only when explicitly requested.
+7. Optionally merge each platform's agent configuration only when separately requested or recorded by valid prior state.
 8. Write the state manifest with relative paths and contract versions.
 9. Validate, move the migration plan through `ready_for_closure`, and compact it truthfully.
 10. Re-run the public privacy scan immediately before success. Compare it with the in-memory approved pre-apply fingerprint multiset: a disappeared candidate is safe, while a new, changed, moved, or duplicated finding fails and rolls back, regardless of category.
@@ -183,6 +186,12 @@ When `--include-agent-config` is present or the target's valid workflow state re
 
 Never place Responses API-only fields in Codex TOML.
 
+## Claude Code Configuration
+
+When `--include-claude-agent-config` is present or the target's valid workflow state records a prior Claude opt-in, apply the three project-agent templates under `.claude/agents/` using `claude_model_profiles.md` as the model and effort owner. The Codex flag or Codex state field alone never enables this step. Without Claude opt-in, leave `.claude/**` byte-for-byte unchanged.
+
+Create missing project-agent files only after opt-in. Replace an existing agent file only when its complete bytes match a registered prior generated template. Preserve customized model pins, instructions, unrelated agents, `CLAUDE.md`, settings, and managed configuration. Refuse symbolic or unsafe target paths and keep partial writes within the common rollback transaction. Report an unavailable model or an administrative restriction without overriding the user's client or provider settings. Never set a global model or `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`.
+
 ## Workflow State Manifest
 
 Target path: `docs/codex/ENGINEERING_WORKFLOW_STATE.yaml`.
@@ -201,11 +210,12 @@ Required fields:
 - `shared_paths`
 - `protected_paths`
 - `runtime_agent_config_managed`
+- `runtime_claude_agent_config_managed`
 - `instruction_contract_version`
 - `planning_contract_version`
 - `orchestration_contract_version`
 
-Use repository-relative paths. Never record a workstation path, username, home directory, credential, or private hostname. The manifest governs only listed paths or explicit managed sections; it does not claim an entire documentation directory.
+In a valid legacy manifest without `runtime_claude_agent_config_managed`, treat Claude configuration as not opted in; a prior Codex opt-in does not imply it. Use repository-relative paths. Never record a workstation path, username, home directory, credential, or private hostname. The manifest governs only listed paths or explicit managed sections; it does not claim an entire documentation directory.
 
 ## Validation And Rollback
 

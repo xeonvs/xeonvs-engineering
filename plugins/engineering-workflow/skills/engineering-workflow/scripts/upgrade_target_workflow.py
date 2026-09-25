@@ -35,15 +35,18 @@ from plan_lifecycle import (
     INDEX_END,
     INDEX_START,
     LifecycleError,
-    check_archive_indexes,
     check_plan_lifecycle,
     closure_issues,
+    planned_explicit_index_writes,
     planned_index_writes,
+    resolve_archive_layout,
 )
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "templates"
 AGENT_TEMPLATE_ROOT = SKILL_ROOT / "assets" / "agents"
+CLAUDE_AGENT_TEMPLATE_ROOT = SKILL_ROOT / "assets" / "claude_agents"
+CLAUDE_AGENT_NAMES = ("workflow-utility", "workflow-explorer", "workflow-reviewer")
 CANONICAL_SOURCE_REPO = "https://github.com/xeonvs/codex-engineering-workflow"
 PLAN_MARKER_START = "<!-- engineering-workflow:upgrade-plan:start -->"
 PLAN_MARKER_END = "<!-- engineering-workflow:upgrade-plan:end -->"
@@ -100,6 +103,11 @@ PRIOR_AGENT_TEMPLATE_HASHES = {
     "explorer": "cf28d059b8bc28123a038d2f4c40fe24fe45e5623d2ee73c0e2b81f0a1d381b4",
     "reviewer": "6182122fcec3d18b14acdabb644b750e58c5d2264d8b7a68eaf54644ef6db133",
 }
+PRIOR_CLAUDE_AGENT_TEMPLATE_HASHES = {
+    "workflow-utility": {"8203a37549a6face81c6db37678752a4d237876e8cf3d269a7b606aa4709cbdb"},
+    "workflow-explorer": {"74de5d3163b9239ca7ea957704b7b5bcd2f7733cf3963dc678f575b42b252f3b"},
+    "workflow-reviewer": {"0bf1b825f92e4d4f88c139356e9353d6cf086aefb3e7ba63854c5e269c22d8b2"},
+}
 
 
 def _content_hash(text: str) -> str:
@@ -112,6 +120,10 @@ def _is_pristine_legacy(relative: str, text: str) -> bool:
 
 def _is_pristine_prior_agent(name: str, text: str) -> bool:
     return _content_hash(text) == PRIOR_AGENT_TEMPLATE_HASHES[name]
+
+
+def _is_pristine_prior_claude_agent(name: str, text: str) -> bool:
+    return _content_hash(text) in PRIOR_CLAUDE_AGENT_TEMPLATE_HASHES[name]
 
 
 def _agent_config_selected(root: Path, explicitly_selected: bool) -> bool:
@@ -130,6 +142,27 @@ def _agent_config_selected(root: Path, explicitly_selected: bool) -> bool:
         and re.search(r"(?m)^skill_name:\s*engineering-workflow\s*$", state) is not None
         and re.search(r"(?m)^mode:\s*upgrade_target_workflow\s*$", state) is not None
         and re.search(r"(?m)^runtime_agent_config_managed:\s*true\s*$", state) is not None
+        and declared
+        and expected.issubset(shared_paths)
+    )
+
+
+def _claude_agent_config_selected(root: Path, explicitly_selected: bool) -> bool:
+    if explicitly_selected:
+        return True
+    if _first_symlink_component(root, STATE_MANIFEST_PATH):
+        return False
+    state = _read(root / STATE_MANIFEST_PATH)
+    try:
+        declared, shared_paths = parse_manifest_path_list(state, "shared_paths")
+    except ValueError:
+        return False
+    expected = {f".claude/agents/{name}.md" for name in CLAUDE_AGENT_NAMES}
+    return (
+        re.search(r"(?m)^schema_version:\s*2\s*$", state) is not None
+        and re.search(r"(?m)^skill_name:\s*engineering-workflow\s*$", state) is not None
+        and re.search(r"(?m)^mode:\s*upgrade_target_workflow\s*$", state) is not None
+        and re.search(r"(?m)^runtime_claude_agent_config_managed:\s*true\s*$", state) is not None
         and declared
         and expected.issubset(shared_paths)
     )
@@ -572,7 +605,9 @@ def _existing_active_conflict(plans_text: str) -> str | None:
     return None
 
 
-def _scan_contract_conflicts(root: Path, include_agent_config: bool = False) -> list[dict[str, str]]:
+def _scan_contract_conflicts(
+    root: Path, include_agent_config: bool = False, include_claude_agent_config: bool = False
+) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     patterns = (
         ("compressed_plan_rule", re.compile(r"\b(?:lightweight|compact|short)\s+(?:active\s+)?plan\b", re.IGNORECASE)),
@@ -591,6 +626,8 @@ def _scan_contract_conflicts(root: Path, include_agent_config: bool = False) -> 
     if include_agent_config:
         canonical_mutation_paths.add(".codex/config.toml")
         canonical_mutation_paths.update(f".codex/agents/{name}.toml" for name in ("utility", "explorer", "reviewer"))
+    if include_claude_agent_config:
+        canonical_mutation_paths.update(f".claude/agents/{name}.md" for name in CLAUDE_AGENT_NAMES)
     reported_symlinks = set()
     for relative in sorted(canonical_mutation_paths):
         symlink_component = _first_symlink_component(root, relative)
@@ -692,7 +729,9 @@ def _topology(root: Path) -> dict[str, Any]:
     }
 
 
-def _proposed_changes(root: Path, include_agent_config: bool) -> list[dict[str, str]]:
+def _proposed_changes(
+    root: Path, include_agent_config: bool, include_claude_agent_config: bool = False
+) -> list[dict[str, str]]:
     changes: list[dict[str, str]] = []
     plans_action = "update" if _present(root / "PLANS.md") else "create"
     changes.append({"path": "PLANS.md", "action": plans_action, "reason": "materialize full migration plan first"})
@@ -758,6 +797,22 @@ def _proposed_changes(root: Path, include_agent_config: bool) -> list[dict[str, 
                 changes.append(
                     {"path": path, "action": "update", "reason": "known pristine prior agent template fingerprint"}
                 )
+    if include_claude_agent_config:
+        for name in CLAUDE_AGENT_NAMES:
+            path = f".claude/agents/{name}.md"
+            template = (CLAUDE_AGENT_TEMPLATE_ROOT / f"{name}.md.tmpl").read_text(encoding="utf-8")
+            if not _present(root / path):
+                changes.append(
+                    {"path": path, "action": "create", "reason": "explicit Claude agent configuration request"}
+                )
+            elif _is_pristine_prior_claude_agent(name, _read(root / path)) and _read(root / path) != template:
+                changes.append(
+                    {
+                        "path": path,
+                        "action": "update",
+                        "reason": "known pristine prior Claude agent template fingerprint",
+                    }
+                )
     return changes
 
 
@@ -766,14 +821,20 @@ def build_migration_report(
     target_version: str,
     include_agent_config: bool = False,
     approved_privacy_review: str | None = None,
+    include_claude_agent_config: bool = False,
 ) -> dict[str, Any]:
     target_version = _validate_target_version(target_version)
     root = repo.resolve()
     if not root.is_dir():
         raise MigrationConflict("missing_repository", "Target repository does not exist")
     include_agent_config = _agent_config_selected(root, include_agent_config)
+    include_claude_agent_config = _claude_agent_config_selected(root, include_claude_agent_config)
     audit = audit_repo(root)
-    conflicts = _scan_contract_conflicts(root, include_agent_config=include_agent_config)
+    conflicts = _scan_contract_conflicts(
+        root,
+        include_agent_config=include_agent_config,
+        include_claude_agent_config=include_claude_agent_config,
+    )
     state_text = _read(root / STATE_MANIFEST_PATH)
     if state_text and not _first_symlink_component(root, STATE_MANIFEST_PATH):
         try:
@@ -862,10 +923,14 @@ def build_migration_report(
             )
         elif finding.get("requires_decision") == "true":
             questions.append(f"Which source should own the contradictory planning rule in {finding['path']}?")
-    proposed = _proposed_changes(root, include_agent_config)
+    proposed = _proposed_changes(root, include_agent_config, include_claude_agent_config)
     touched = {item["path"] for item in proposed}
     ownership = audit["ownership"]
-    protected = sorted(set(ownership["protected"] + ownership["unknown"] + ownership["external_source_of_truth"]))
+    protected = set(ownership["protected"] + ownership["unknown"] + ownership["external_source_of_truth"])
+    protected.difference_update(
+        item["path"] for item in proposed if item["reason"] == "known pristine prior Claude agent template fingerprint"
+    )
+    protected = sorted(protected)
     current_workflow_version = (
         _manifest_version(root / STATE_MANIFEST_PATH)
         if not _first_symlink_component(root, STATE_MANIFEST_PATH)
@@ -893,7 +958,7 @@ def build_migration_report(
         "historical_paths": ownership["historical"],
         "conflicts": conflicts,
         "instruction_contract": instruction_contract,
-        "archive_indexes": audit["archive_indexes"],
+        "archive_indexes": check_plan_lifecycle(root)["archive_indexes"],
         "privacy_findings": privacy_findings,
         "privacy_review": privacy_review,
         "proposed_changes": proposed,
@@ -909,6 +974,7 @@ def build_migration_report(
         ],
         "rollback_plan": "Restore every pre-migration file snapshot in reverse mutation order; preserve a PLANS.md failure note if recovery is needed.",
         "include_agent_config": include_agent_config,
+        "include_claude_agent_config": include_claude_agent_config,
     }
 
 
@@ -933,12 +999,26 @@ def _optional_agent_config_is_current(root: Path, include_agent_config: bool, to
     )
 
 
+def _optional_claude_agent_config_is_current(root: Path, include_claude_agent_config: bool) -> bool:
+    if not include_claude_agent_config:
+        return True
+    state = _read(root / STATE_MANIFEST_PATH)
+    return re.search(r"(?m)^runtime_claude_agent_config_managed:\s*true\s*$", state) is not None and all(
+        _present(root / f".claude/agents/{name}.md") and not _first_symlink_component(root, f".claude/agents/{name}.md")
+        for name in CLAUDE_AGENT_NAMES
+    )
+
+
 def _already_current(report: dict[str, Any], include_agent_config: bool, root: Path) -> bool:
     topology = report["detected_topology"]
     required_artifacts = ("root_agents", "plans", "backlog", "pitfalls", "principles", "state_manifest")
     pristine_update_pending = any(
         change.get("reason")
-        in {"known pristine legacy template fingerprint", "known pristine prior agent template fingerprint"}
+        in {
+            "known pristine legacy template fingerprint",
+            "known pristine prior agent template fingerprint",
+            "known pristine prior Claude agent template fingerprint",
+        }
         for change in report["proposed_changes"]
     )
     return (
@@ -951,6 +1031,7 @@ def _already_current(report: dict[str, Any], include_agent_config: bool, root: P
         and report["archive_indexes"]["success"]
         and not pristine_update_pending
         and _optional_agent_config_is_current(root, include_agent_config, topology)
+        and _optional_claude_agent_config_is_current(root, report["include_claude_agent_config"])
     )
 
 
@@ -976,7 +1057,12 @@ def _already_current_result(report: dict[str, Any], *, mode: str) -> dict[str, A
 
 
 def _migration_plan(
-    target_version: str, include_agent_config: bool, *, done: bool = False, result: str = "Not run yet."
+    target_version: str,
+    include_agent_config: bool,
+    *,
+    include_claude_agent_config: bool = False,
+    done: bool = False,
+    result: str = "Not run yet.",
 ) -> str:
     status = "ready_for_closure" if done else "active"
     checkbox = "x" if done else " "
@@ -1004,7 +1090,7 @@ direct_execution
 ### Requested Scope
 
 - Materialize the full migration plan before any other target write.
-- Add missing canonical workflow structure, exact ownership state, and optional agent configuration only when explicitly selected.
+- Add missing canonical workflow structure, exact ownership state, and each platform's optional agent configuration only when separately selected.
 
 ### Requirement Traceability
 
@@ -1012,7 +1098,7 @@ direct_execution
 | --- | --- | --- | --- | --- | --- |
 | REQ-001 | Full migration plan is the first target write. | engineering-workflow contract | WQ-01 | Plan schema validates. | done |
 | REQ-002 | Workflow-owned structure and manifest reach {target_version} without modifying protected docs. | migration report | WQ-02 | Protected snapshots agree and manifest parses. | {req_status} |
-| REQ-003 | Runtime agent configuration follows the explicit selection. | user invocation | WQ-03 | Config is {"structurally merged" if include_agent_config else "untouched"}. | {req_status} |
+| REQ-003 | Runtime agent configuration follows each platform's explicit selection. | user invocation | WQ-03 | Codex config is {"structurally merged" if include_agent_config else "untouched"}; Claude agents are {"installed or preserved" if include_claude_agent_config else "untouched"}. | {req_status} |
 
 ### Explicit Non-Goals
 
@@ -1029,7 +1115,8 @@ direct_execution
 
 ### User Decisions And Answers
 
-- Runtime agent configuration requested: {"yes" if include_agent_config else "no"}.
+- Codex runtime agent configuration requested: {"yes" if include_agent_config else "no"}.
+- Claude Code project agents requested: {"yes" if include_claude_agent_config else "no"}.
 
 ### Completed Baseline State
 
@@ -1049,7 +1136,7 @@ direct_execution
 
 - REQ-001: structural plan validation.
 - REQ-002: manifest, ownership, privacy, and protected-file checks.
-- REQ-003: TOML parse and exact configuration diff when selected.
+- REQ-003: TOML parse and exact configuration diff for Codex when selected; native Claude agent paths and exact-template preservation when selected.
 
 ### Latest Validation Results
 
@@ -1210,6 +1297,7 @@ def _manifest_text(
     shared_paths: list[str],
     include_agent_config: bool,
     existing_manifest: str = "",
+    include_claude_agent_config: bool = False,
 ) -> str:
     archive_path, archive_indexes = _manifest_archive_contract(existing_manifest)
     applied = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -1243,6 +1331,7 @@ def _manifest_text(
         [
             'active_plan: "PLANS.md"',
             f"runtime_agent_config_managed: {'true' if include_agent_config else 'false'}",
+            f"runtime_claude_agent_config_managed: {'true' if include_claude_agent_config else 'false'}",
             "instruction_contract_version: 3",
             "planning_contract_version: 2",
             "orchestration_contract_version: 3",
@@ -1256,6 +1345,7 @@ def apply_migration(
     target_version: str,
     include_agent_config: bool = False,
     approved_privacy_review: str | None = None,
+    include_claude_agent_config: bool = False,
 ) -> dict[str, Any]:
     root = repo.resolve()
     expected_root_identity = _directory_identity(root)
@@ -1264,8 +1354,10 @@ def apply_migration(
         target_version,
         include_agent_config,
         approved_privacy_review,
+        include_claude_agent_config,
     )
     include_agent_config = report["include_agent_config"]
+    include_claude_agent_config = report["include_claude_agent_config"]
     privacy_review, privacy_findings, approved_fingerprints = _evaluate_privacy_review(
         root,
         report["current_workflow_version"],
@@ -1343,7 +1435,11 @@ def apply_migration(
             (created if before is None else changed).append(relative)
 
         try:
-            initial_plan = _migration_plan(target_version, include_agent_config)
+            initial_plan = _migration_plan(
+                target_version,
+                include_agent_config,
+                include_claude_agent_config=include_claude_agent_config,
+            )
             write("PLANS.md", _put_plan_first(read("PLANS.md"), initial_plan))
 
             template_map = {
@@ -1366,6 +1462,10 @@ def apply_migration(
             try:
                 for relative, data in planned_index_writes(root).items():
                     write(relative, data.decode("utf-8"))
+                archive_layout = resolve_archive_layout(root)
+                if archive_layout.explicit:
+                    for relative, data in planned_explicit_index_writes(root, archive_layout).items():
+                        write(relative, data.decode("utf-8"))
             except LifecycleError as exc:
                 raise MigrationConflict(exc.code, str(exc)) from exc
 
@@ -1375,10 +1475,6 @@ def apply_migration(
                     instruction_result["status"],
                     "Generated instruction contract did not validate",
                 )
-            index_result = check_archive_indexes(root)
-            if not index_result["success"]:
-                raise MigrationConflict("index_validation_failed", "Generated documentation indexes did not validate")
-
             if include_agent_config:
                 existing_config = read(".codex/config.toml")
                 merged, config_diff = _merge_codex_config(existing_config)
@@ -1393,6 +1489,16 @@ def apply_migration(
                             (AGENT_TEMPLATE_ROOT / f"{name}.toml.tmpl").read_text(encoding="utf-8"),
                         )
 
+            if include_claude_agent_config:
+                for name in CLAUDE_AGENT_NAMES:
+                    relative = f".claude/agents/{name}.md"
+                    existing_agent = read(relative)
+                    template = (CLAUDE_AGENT_TEMPLATE_ROOT / f"{name}.md.tmpl").read_text(encoding="utf-8")
+                    if not secure.exists(relative) or (
+                        _is_pristine_prior_claude_agent(name, existing_agent) and existing_agent != template
+                    ):
+                        write(relative, template)
+
             shared_paths = [path for path in CANONICAL_FILES.values() if secure.exists(path)]
             if include_agent_config:
                 shared_paths.extend(
@@ -1402,12 +1508,19 @@ def apply_migration(
                 )
                 if secure.exists(".codex/config.toml"):
                     shared_paths.append(".codex/config.toml")
+            if include_claude_agent_config:
+                shared_paths.extend(
+                    f".claude/agents/{name}.md"
+                    for name in CLAUDE_AGENT_NAMES
+                    if secure.exists(f".claude/agents/{name}.md")
+                )
             manifest = _manifest_text(
                 target_version,
                 report["protected_paths"],
                 sorted(set(shared_paths)),
                 include_agent_config,
                 read(STATE_MANIFEST_PATH),
+                include_claude_agent_config=include_claude_agent_config,
             )
             if scan_privacy_text(manifest):
                 raise MigrationConflict("unsafe_manifest", "Generated manifest contains private data")
@@ -1426,7 +1539,13 @@ def apply_migration(
                     raise MigrationConflict("protected_file_changed", "A protected file changed during migration")
 
             final_result = "Plan schema, ownership manifest, privacy, protected-file, and optional TOML checks passed."
-            final_plan = _migration_plan(target_version, include_agent_config, done=True, result=final_result)
+            final_plan = _migration_plan(
+                target_version,
+                include_agent_config,
+                include_claude_agent_config=include_claude_agent_config,
+                done=True,
+                result=final_result,
+            )
             write("PLANS.md", _put_plan_first(read("PLANS.md"), final_plan))
             final_plan_issues = validate_plan_schema(read("PLANS.md"), declared_external_sources=True)
             final_plan_issues.extend(closure_issues(read("PLANS.md"), require_ready=True))
@@ -1485,6 +1604,7 @@ def apply_migration(
                 failure = _migration_plan(
                     target_version,
                     include_agent_config,
+                    include_claude_agent_config=include_claude_agent_config,
                     result=f"Apply failed and non-plan files were restored: {type(exc).__name__}.",
                 )
                 secure.write_text("PLANS.md", _put_plan_first(read("PLANS.md"), failure))
@@ -1547,6 +1667,7 @@ def execute_prompt_upgrade(
     target_version: str,
     include_agent_config: bool = False,
     approved_privacy_review: str | None = None,
+    include_claude_agent_config: bool = False,
 ) -> dict[str, Any]:
     """Run report-first migration for an authorized natural-language target-upgrade request."""
     report = build_migration_report(
@@ -1554,6 +1675,7 @@ def execute_prompt_upgrade(
         target_version,
         include_agent_config,
         approved_privacy_review,
+        include_claude_agent_config,
     )
     include_agent_config = report["include_agent_config"]
     if report["required_user_questions"]:
@@ -1633,6 +1755,7 @@ def execute_prompt_upgrade(
         target_version,
         include_agent_config,
         approved_privacy_review,
+        include_claude_agent_config,
     )
     if applied.get("update_status") == "question_required":
         agent_action = "ask_targeted_question"
@@ -1666,8 +1789,9 @@ def main() -> int:
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.9.9")
+    parser.add_argument("--target-version", default="0.9.10")
     parser.add_argument("--include-agent-config", action="store_true")
+    parser.add_argument("--include-claude-agent-config", action="store_true")
     parser.add_argument(
         "--approve-privacy-review",
         help="Approve only the exact value-free privacy review token returned by a prior report.",
@@ -1682,6 +1806,7 @@ def main() -> int:
                 args.target_version,
                 args.include_agent_config,
                 args.approve_privacy_review,
+                args.include_claude_agent_config,
             )
         elif args.apply:
             result = apply_migration(
@@ -1689,6 +1814,7 @@ def main() -> int:
                 args.target_version,
                 args.include_agent_config,
                 args.approve_privacy_review,
+                args.include_claude_agent_config,
             )
         else:
             result = build_migration_report(
@@ -1696,6 +1822,7 @@ def main() -> int:
                 args.target_version,
                 args.include_agent_config,
                 args.approve_privacy_review,
+                args.include_claude_agent_config,
             )
     except MigrationConflict as exc:
         selected_mode = "prompt" if args.prompt else ("apply" if args.apply else "plan")
