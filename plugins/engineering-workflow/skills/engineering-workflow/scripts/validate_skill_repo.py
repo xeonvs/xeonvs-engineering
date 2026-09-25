@@ -53,6 +53,7 @@ REQUIRED_PATHS = (
     "skill/engineering-workflow/references/planning_and_backlog.md",
     "skill/engineering-workflow/references/agent_orchestration.md",
     "skill/engineering-workflow/references/model_profiles.md",
+    "skill/engineering-workflow/references/claude_model_profiles.md",
     "skill/engineering-workflow/references/skill_update.md",
     "skill/engineering-workflow/references/target_workflow_upgrade.md",
     "skill/engineering-workflow/references/validation_safety.md",
@@ -72,6 +73,9 @@ REQUIRED_PATHS = (
     "skill/engineering-workflow/assets/agents/utility.toml.tmpl",
     "skill/engineering-workflow/assets/agents/explorer.toml.tmpl",
     "skill/engineering-workflow/assets/agents/reviewer.toml.tmpl",
+    "skill/engineering-workflow/assets/claude_agents/workflow-utility.md.tmpl",
+    "skill/engineering-workflow/assets/claude_agents/workflow-explorer.md.tmpl",
+    "skill/engineering-workflow/assets/claude_agents/workflow-reviewer.md.tmpl",
 )
 FORBIDDEN_PATH_PARTS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo"}
@@ -104,6 +108,7 @@ SKILL_REQUIRED_REFERENCES = (
     "references/platform_compatibility.md",
     "references/agent_orchestration.md",
     "references/model_profiles.md",
+    "references/claude_model_profiles.md",
     "references/skill_update.md",
     "references/target_workflow_upgrade.md",
     "references/validation_safety.md",
@@ -133,6 +138,7 @@ CANONICAL_OWNER_MARKERS = {
     "## Deterministic Route": "skill/engineering-workflow/references/agent_orchestration.md",
     "## Programmatic Tool Route": "skill/engineering-workflow/references/agent_orchestration.md",
     "## Capability Mapping": "skill/engineering-workflow/references/model_profiles.md",
+    "## Claude Capability Mapping": "skill/engineering-workflow/references/claude_model_profiles.md",
     "## Refresh Loaded Skill Decision": "skill/engineering-workflow/references/skill_update.md",
     "## Installation Types": "skill/engineering-workflow/references/skill_update.md",
     "## Prompt Invocation": "skill/engineering-workflow/references/target_workflow_upgrade.md",
@@ -532,6 +538,40 @@ def _validate_agent_profiles(repo_root: Path) -> list[str]:
     return issues
 
 
+def _validate_claude_agent_profiles(repo_root: Path) -> list[str]:
+    issues: list[str] = []
+    directory = repo_root / "skill/engineering-workflow/assets/claude_agents"
+    for name, model, effort in (
+        ("workflow-utility", "haiku", None),
+        ("workflow-explorer", "sonnet", "medium"),
+        ("workflow-reviewer", "sonnet", "medium"),
+    ):
+        path = directory / f"{name}.md.tmpl"
+        if not path.is_file():
+            continue
+        content = path.read_text(encoding="utf-8")
+        parts = content.split("---\n", 2)
+        if len(parts) != 3 or parts[0] or not parts[2].strip():
+            issues.append(f"{path.name} needs valid frontmatter and a task prompt")
+            continue
+        fields: dict[str, str] = {}
+        for line in parts[1].splitlines():
+            key, separator, value = line.partition(":")
+            if not separator or not key or key in fields:
+                issues.append(f"{path.name} has invalid or duplicate frontmatter")
+                break
+            fields[key] = value.strip()
+        else:
+            expected = {"name": name, "model": model, "tools": "Read, Grep, Glob"}
+            if any(fields.get(key) != value for key, value in expected.items()) or not fields.get("description"):
+                issues.append(f"{path.name} has an invalid Claude role profile")
+            if fields.get("effort") != effort:
+                issues.append(f"{path.name} has an unsupported or unexpected effort")
+            if set(fields) - {"name", "description", "tools", "model", "effort"}:
+                issues.append(f"{path.name} includes unexpected Claude agent settings")
+    return issues
+
+
 def _validate_programmatic_tool_assets(repo_root: Path) -> list[str]:
     issues: list[str] = []
     template_path = repo_root / "skill/engineering-workflow/assets/templates/PROGRAMMATIC_TOOL_STAGE.md.tmpl"
@@ -761,6 +801,7 @@ def validate_skill_repo(repo_root: Path) -> dict:
     errors.extend(_validate_source_indexes(root))
     errors.extend(_validate_canonical_owners(root))
     errors.extend(_validate_agent_profiles(root))
+    errors.extend(_validate_claude_agent_profiles(root))
     errors.extend(_validate_programmatic_tool_assets(root))
     errors.extend(_validate_marketplace_package(root, version))
     errors.extend(_validate_active_versions(root, version))

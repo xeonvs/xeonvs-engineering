@@ -14,7 +14,7 @@ reviewed local bundle held in this repository.
 <!-- BEGIN GENERATED PLUGIN VERSIONS -->
 | Plugin | Version | Purpose | Canonical source |
 | --- | --- | --- | --- |
-| [`engineering-workflow`](plugins/engineering-workflow/) | 0.9.9 | Audit, plan, migrate, validate, and maintain repository engineering workflows. | [`xeonvs/codex-engineering-workflow`](https://github.com/xeonvs/codex-engineering-workflow) |
+| [`engineering-workflow`](plugins/engineering-workflow/) | 0.9.10 | Audit, plan, migrate, validate, and maintain repository engineering workflows. | [`xeonvs/codex-engineering-workflow`](https://github.com/xeonvs/codex-engineering-workflow) |
 | [`tgrep-search`](plugins/tgrep-search/) | 1.0.3 | Search local source trees efficiently with the tgrep trigram index. | [`xeonvs/tgrep-search`](https://github.com/xeonvs/tgrep-search) |
 <!-- END GENERATED PLUGIN VERSIONS -->
 
