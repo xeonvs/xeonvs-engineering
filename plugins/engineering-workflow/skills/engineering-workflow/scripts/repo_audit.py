@@ -62,6 +62,7 @@ def summarize_audit(report: dict, full_report: dict[str, int | str]) -> dict:
         "instruction_contract",
         "archive_indexes",
         "discovery",
+        "documentation_navigation",
     }
     return {
         "status": "attention_required" if failure_categories else "ok",
@@ -75,6 +76,7 @@ def summarize_audit(report: dict, full_report: dict[str, int | str]) -> dict:
             "prompt_injection_risks": len(report["prompt_injection_risks"]),
             "instruction_contract_errors": len(report["instruction_contract"]["errors"]),
             "archive_index_errors": len(report["archive_indexes"]["errors"]),
+            "documentation_nodes": len(report["documentation_navigation"]["nodes"]),
         },
         "discovery": discovery,
         "omissions": {

@@ -259,6 +259,20 @@ def _links(text: str) -> list[str]:
 
 def _index_targets(root: Path, relative_dir: str, extra_files: set[str] | None = None) -> list[str]:
     extra_files = extra_files or set()
+    try:
+        documentation_declared, _ = parse_manifest_path_list(_read(root / STATE_MANIFEST_PATH), "documentation_roots")
+    except ValueError as exc:
+        raise LifecycleError("invalid_documentation_state", "Documentation roots are not a valid path list") from exc
+    if documentation_declared and relative_dir in {"docs", "docs/codex", "docs/engineering"}:
+        from documentation_navigation import NavigationError, documentation_index_targets
+
+        try:
+            return [
+                os.path.relpath(root / path, root / relative_dir).replace(os.sep, "/")
+                for path in documentation_index_targets(root, f"{relative_dir}/README.md", extra_files=extra_files)
+            ]
+        except NavigationError as exc:
+            raise LifecycleError(exc.code, str(exc)) from exc
     directory = root / relative_dir
     entries: set[str] = set()
     if directory.is_dir() and not directory.is_symlink():

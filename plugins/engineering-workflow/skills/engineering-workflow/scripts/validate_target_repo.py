@@ -17,6 +17,7 @@ from common import (
     run_in_disposable_copy,
     validate_plan_schema,
 )
+from documentation_navigation import check_documentation
 from instruction_contract import check_instruction_contract
 from plan_lifecycle import check_plan_lifecycle, closure_issues
 
@@ -34,6 +35,14 @@ def validate_repo(
     instruction_contract = check_instruction_contract(repo)
     plan_lifecycle = check_plan_lifecycle(repo)
     archive_indexes = plan_lifecycle["archive_indexes"]
+    documentation = check_documentation(repo)
+    errors.extend(
+        f"Documentation navigation error: {item['code']} in {item['path']}" for item in documentation["errors"]
+    )
+    warnings.extend(
+        f"Documentation navigation warning: {item['code']} in {item.get('path', '.')}"
+        for item in documentation["warnings"]
+    )
 
     for index, command in enumerate(check_commands or [], start=1):
         safety = classify_command_safety(command)
@@ -133,6 +142,7 @@ def validate_repo(
         "prompt_injection_risks": audit["prompt_injection_risks"],
         "instruction_contract": instruction_contract,
         "archive_indexes": archive_indexes,
+        "documentation_navigation": documentation,
         "disposable_results": disposable_results,
     }
 

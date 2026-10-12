@@ -13,6 +13,9 @@ import tempfile
 from pathlib import Path
 from typing import Iterable
 
+# Runtime helpers must not create executable caches in the installed plugin tree.
+sys.dont_write_bytecode = True
+
 PLAN_SCHEMA_VERSION = 2
 PLAN_ORIGINS = {
     "plan_mode_approved",
@@ -570,12 +573,14 @@ def _contains_managed_section(path: Path) -> bool:
     )
 
 
-def classify_workflow_artifact(root: Path, path: Path, managed_paths: set[str] | None = None) -> str:
+def classify_workflow_artifact(
+    root: Path, path: Path, managed_paths: set[str] | None = None, *, inspect_markers: bool = True
+) -> str:
     rel = path.relative_to(root).as_posix()
     lower = rel.lower()
     managed_paths = managed_paths if managed_paths is not None else load_managed_paths(root)
 
-    if rel == STATE_MANIFEST_PATH or rel in managed_paths or _contains_managed_section(path):
+    if rel == STATE_MANIFEST_PATH or rel in managed_paths or (inspect_markers and _contains_managed_section(path)):
         return "managed"
     if any(lower.startswith(prefix) for prefix in SUPPORTED_ARCHIVE_PREFIXES):
         return "historical"
@@ -1163,6 +1168,7 @@ def run_in_disposable_copy(repo: Path, commands: list[str], timeout_seconds: int
 
 
 def audit_repo(root: Path) -> dict:
+    from documentation_navigation import NavigationError, build_documentation_map
     from instruction_contract import check_instruction_contract
     from plan_lifecycle import check_archive_indexes
 
@@ -1198,6 +1204,16 @@ def audit_repo(root: Path) -> dict:
     }
     instruction_contract = check_instruction_contract(root)
     archive_indexes = check_archive_indexes(root)
+    try:
+        documentation_navigation = build_documentation_map(root, inventory=(relevant_files, discovery))
+    except NavigationError as exc:
+        documentation_navigation = {
+            "schema_version": 1,
+            "nodes": [],
+            "routes": [],
+            "discovery": discovery,
+            "warnings": [{"code": exc.code, "path": "."}],
+        }
 
     return {
         "root": str(root.resolve()),
@@ -1218,6 +1234,7 @@ def audit_repo(root: Path) -> dict:
         "recommended_validation": recommended_checks(root, relevant_files),
         "instruction_contract": instruction_contract,
         "archive_indexes": archive_indexes,
+        "documentation_navigation": documentation_navigation,
     }
 
 

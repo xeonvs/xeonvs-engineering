@@ -2,7 +2,7 @@
 name: engineering-workflow
 description: Set up, audit, or upgrade repository workflow instructions and planning. Use for workflow changes or explicit skill refresh/update; ordinary repository work does not invoke migration.
 metadata:
-  version: 0.9.10
+  version: 0.10.0
 ---
 
 # Engineering Workflow
@@ -42,11 +42,13 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 - `Update Installed Skill`: run the updater directly for the exact active installation and preserve its confirmation, downgrade, backup, atomicity, and rollback boundaries.
 - `Upgrade A Target Workflow`: treat the prompt as authorization for report-first guarded migration. If the result returns `review_instruction_migration`, read the customized owner, preserve an equivalent rule or add only missing version-3 invariants/routes, then rerun the report; ask only for a genuine targeted ownership decision. If it returns `request_privacy_review_approval`, do not open the flagged lines or inspect matched values: show only each candidate's category, relative path, and line plus the aggregate review token. Ask the user to inspect values locally and explicitly approve the exact snapshot before rerunning with the token; highlight credential, token, key, and credential-bearing URL risks. Never approve on the user's behalf or treat migration approval as permission to publish sensitive content.
 - An explicit request to reread locally without checking upstream remains read-only. Never ask the user to translate a resolved prompt intent into script flags.
+- Documentation navigation, authoring, upkeep, and approved restructuring: `references/documentation_navigation.md`. At repository entry or recovery, use one compact map; expand relevant branches on demand.
+- Stable self-update and target recommendations: `references/skill_update.md`. Honor installation policy, use published distribution evidence, refresh applicable instructions, and propose target changes before mutation.
 - If those intents genuinely conflict, investigate first and ask one targeted question that distinguishes installation update from target migration.
 
 ## Core Workflow
 
-1. Reuse the established invoking host. Read `references/platform_compatibility.md` when host or capability behavior is uncertain; select a Codex or Claude Code branch only when the actual host establishes it, otherwise use the shared agent-neutral fallback. In Claude Code, explicitly read the applicable target `AGENTS.md` files rather than assuming automatic discovery.
+1. Reuse the established invoking host. Read `references/platform_compatibility.md` when host or capability behavior is uncertain; select a Codex or Claude Code branch only when the actual host establishes it, otherwise use the shared agent-neutral fallback. In Claude Code, explicitly read the applicable target `AGENTS.md` files rather than assuming automatic discovery. At repository entry, use `references/skill_update.md` for the cached installation-policy check and read-only target proposal; a local-only request skips upstream access.
 2. For scaffold, merge, or workflow-structure verification, run `scripts/repo_audit.py` with `<repo> --summary --full-report <protected-task-path>` so the model receives bounded status and counts while complete evidence remains available at the reported path. Reuse an applicable audit already available; use the compatible default full-JSON form only when a non-agent consumer requires it. Git-backed discovery includes tracked and non-ignored untracked files; non-Git discovery is explicitly bounded and reports omissions under `references/repo_maturity_matrix.md`. For target upgrade, follow `references/target_workflow_upgrade.md`, including its customized-owner adoption review before prompt apply; the upgrader owns the report-first audit, so do not add a duplicate standalone audit. Installed-skill refresh/update follows `references/skill_update.md` without auditing or migrating the target repository. A narrow explanation uses only the relevant owners.
 3. For repository-changing work, read `references/planning_and_backlog.md`, create or update the full active plan as the first write, and pass its fidelity gate.
 4. For instruction changes, read `references/instruction_lifecycle.md`; preserve one canonical owner per invariant, keep target `AGENTS.md` route-only, and keep pitfalls non-normative.
@@ -61,6 +63,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 
 - Planning, traceability, fidelity, reconciliation, and backlog: `references/planning_and_backlog.md`
 - Instruction ownership, routes, incident causes, guards, and retirement: `references/instruction_lifecycle.md`
+- Documentation maps, writing, impact review, and exact approved restructuring: `references/documentation_navigation.md`
 - Host capability boundaries and verified Codex/Claude integrations: `references/platform_compatibility.md`
 - Programmatic tool routing, agent routing, and shared-state ownership: `references/agent_orchestration.md`
 - Current capability-to-model mapping: `references/model_profiles.md`
@@ -85,4 +88,7 @@ Use this skill for the workflow layer around a repository. Keep product, domain,
 - `scripts/sanitize_output.py`: privacy scan for text or a tracked public tree.
 - `scripts/update_installed_skill.py`: check drift, recommend refresh/update, or safely update the exact active installation.
 - `scripts/upgrade_target_workflow.py`: read-only plan, guarded apply, or agent-invoked prompt orchestration.
+- `scripts/documentation_navigation.py`: bounded document map, focused expansion, and managed navigation checks.
+- `scripts/documentation_restructure.py`: exact-snapshot proposal approval and transactional documentation restructuring.
+- `scripts/workflow_updates.py`: installation-scoped update policy, stable/native skill refresh, and read-only target recommendations.
 - `scripts/validate_skill_repo.py`: structural and semantic validation for this public skill repository.

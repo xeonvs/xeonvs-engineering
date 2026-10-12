@@ -30,6 +30,7 @@ from common import (
     scan_public_tree_with_fingerprints,
     validate_plan_schema,
 )
+from documentation_navigation import NavigationError, check_documentation, planned_documentation_index_writes
 from instruction_contract import check_instruction_contract
 from plan_lifecycle import (
     INDEX_END,
@@ -41,6 +42,7 @@ from plan_lifecycle import (
     planned_index_writes,
     resolve_archive_layout,
 )
+from release_adoption import WRITING_OWNER_NAMES, assess_target_adoption, load_descriptor, recorded_adoption_evidence
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "templates"
@@ -81,6 +83,11 @@ LEGACY_PRISTINE_HASHES = {
         "783b9e342105ec7618fbd0a75baaa7c60800d8066d1cc9125ec20542428d507f",
         "80fef49bbb670fe41ab055df4a286db1e5264a46d2a9513f6c229e18f3e8e93b",
         "cc1e93e5ecf382d71c16212fcb7b94dacb604616e716f6d4d476c112e0392070",
+        # Exact rendered 0.9.10 routers need the documentation/update routes.
+        "51eb63a9e33b764c7bf4930f4f4b485da7fe183b50afd53c6340e7c0acf9ad73",
+        "fc0bd39401db17f5cdd7b843080a1bdb12c57b65e0e9481f48b4013f8f6c8c04",
+        "1ebf928a084550b82db7ee08c4b957b1ac546f080993bb844534c8172085dcfa",
+        "7cf91dead93547e332ac46b72f90633f09f5c1b9aec44b5c4284d7bfa53249fc",
     },
     CANONICAL_FILES["principles"]: {
         # Prior pristine local owner requires the new context-discipline meaning.
@@ -569,6 +576,137 @@ def _source_commit() -> str:
     return value if completed.returncode == 0 and re.fullmatch(r"[0-9a-f]{40}", value) else "unresolved"
 
 
+def _source_provenance() -> tuple[str, str]:
+    """Resolve local immutable release evidence; no transport or guessed source identity."""
+    from update_installed_skill import is_canonical_upstream
+
+    repo_root = SKILL_ROOT.parents[1]
+
+    def git(*arguments: str) -> str | None:
+        result = subprocess.run(["git", "-C", str(repo_root), *arguments], capture_output=True, text=True, check=False)
+        return result.stdout.strip() if result.returncode == 0 else None
+
+    remote = git("remote", "get-url", "origin")
+    identity = re.search(r"(?m)^\s*version:\s*(\S+)\s*$", (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8"))
+    if not remote or not is_canonical_upstream(remote) or not identity:
+        return "unresolved", "unresolved"
+    ref = f"v{identity.group(1)}"
+    commit = git("rev-parse", "--verify", f"{ref}^{{commit}}")
+    relative = SKILL_ROOT.relative_to(repo_root).as_posix()
+    dirty = git("status", "--porcelain", "--untracked-files=all", "--", relative)
+    if (
+        git("cat-file", "-t", ref) != "tag"
+        or not commit
+        or not re.fullmatch(r"[0-9a-f]{40}", commit)
+        or dirty != ""
+        or git("rev-parse", f"{ref}:{relative}") != git("rev-parse", f"HEAD:{relative}")
+    ):
+        return "unresolved", "unresolved"
+    return ref, commit
+
+
+def _optional_documentation_state(existing: str) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    for key in ("documentation_roots", "documentation_indexes", "adopted_change_ids"):
+        try:
+            present, values = parse_manifest_path_list(existing, key)
+        except ValueError as exc:
+            raise MigrationConflict("invalid_documentation_state", str(exc)) from exc
+        if present:
+            if len(values) != len(set(values)):
+                raise MigrationConflict("invalid_documentation_state", f"{key} contains duplicate values")
+            result[key] = values
+    return result
+
+
+def _release_adoption(root: Path, target_version: str, reviewed: list[str] | None = None) -> dict[str, Any]:
+    if _first_symlink_component(root, STATE_MANIFEST_PATH):
+        return {
+            "adoption_status": "blocked_unsafe_state",
+            "pending_change_ids": [],
+            "resolved_change_ids": [],
+            "template_change_ids": [],
+            "reviewed_change_ids": [],
+        }
+    try:
+        _optional_documentation_state(_read(root / STATE_MANIFEST_PATH))
+        applicable = [
+            change
+            for change in load_descriptor()["changes"]
+            if _semver_tuple(change["introduced_in"]) <= _semver_tuple(target_version)
+        ]
+        known = {change["id"] for change in applicable}
+        reviewed_ids = set(reviewed or [])
+        if reviewed_ids - known:
+            raise ValueError("Reviewed change IDs are unknown or inapplicable")
+        version = ".".join(map(str, _semver_tuple(target_version)))
+        stored_adoption = assess_target_adoption(root, version)
+        recorded = set(stored_adoption["resolved_change_ids"])
+        adoption = assess_target_adoption(root, version, recorded | reviewed_ids)
+    except ValueError as exc:
+        raise MigrationConflict("invalid_reviewed_change", str(exc)) from exc
+    templates = {
+        "AGENTS.md": _template(
+            "AGENTS.md.tmpl",
+            {
+                "entrypoint_hint": "README.md" if _present(root / "README.md") else ".",
+                "subsystem_hint": "src/" if _present(root / "src") else ".",
+            },
+        ),
+        CANONICAL_FILES["principles"]: _template("project_principles.md.tmpl"),
+    }
+    generated = all(
+        not _present(root / path) or _read(root / path) == template or _is_pristine_legacy(path, _read(root / path))
+        for path, template in templates.items()
+    )
+    writing_owners = {
+        path
+        for change in adoption["changes"]
+        for path in change.get("existing_owners", [])
+        if Path(path).name in WRITING_OWNER_NAMES
+    }
+    additional_owners = {
+        path
+        for snapshot in adoption["owner_snapshot"].values()
+        for path, digest in snapshot.items()
+        if digest is not None and path not in templates
+    }
+    automatic = (
+        set(adoption["pending_change_ids"]) if generated and not writing_owners and not additional_owners else set()
+    )
+    resolved = recorded | reviewed_ids | automatic | {change["id"] for change in adoption["runtime_changes"]}
+    pending = sorted(set(adoption["pending_change_ids"]) - automatic)
+    status = "review_required" if pending else "resolved"
+    if not adoption["descriptor_covers_target"]:
+        status = "runtime_upgrade_required"
+    return {
+        **adoption,
+        "adoption_status": status,
+        "pending_change_ids": pending,
+        "resolved_change_ids": sorted(resolved),
+        "template_change_ids": sorted(automatic),
+        "reviewed_change_ids": sorted(reviewed_ids),
+        "semantic_review_performed": bool(reviewed_ids),
+    }
+
+
+def _semver_tuple(value: str) -> tuple[int, int, int]:
+    return tuple(int(part) for part in value.split("-", 1)[0].split("+", 1)[0].split("."))
+
+
+def _documentation_validation(
+    root: Path, target_version: str, changed_paths: list[str] | None = None
+) -> dict[str, Any]:
+    result = check_documentation(root, changed_paths=changed_paths)
+    declared, _ = parse_manifest_path_list(_read(root / STATE_MANIFEST_PATH), "documentation_roots")
+    if not declared and _semver_tuple(target_version) < (0, 10, 0):
+        legacy_drift = [item for item in result["errors"] if item["code"] == "index_stale"]
+        result["warnings"].extend(legacy_drift)
+        result["errors"] = [item for item in result["errors"] if item["code"] != "index_stale"]
+        result["success"] = not result["errors"]
+    return result
+
+
 def _manifest_version(path: Path) -> str | None:
     if not path.is_file():
         return None
@@ -822,6 +960,7 @@ def build_migration_report(
     include_agent_config: bool = False,
     approved_privacy_review: str | None = None,
     include_claude_agent_config: bool = False,
+    reviewed_change_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     target_version = _validate_target_version(target_version)
     root = repo.resolve()
@@ -839,6 +978,7 @@ def build_migration_report(
     if state_text and not _first_symlink_component(root, STATE_MANIFEST_PATH):
         try:
             _manifest_archive_contract(state_text)
+            _optional_documentation_state(state_text)
         except MigrationConflict as exc:
             conflicts.append(
                 {
@@ -924,6 +1064,48 @@ def build_migration_report(
         elif finding.get("requires_decision") == "true":
             questions.append(f"Which source should own the contradictory planning rule in {finding['path']}?")
     proposed = _proposed_changes(root, include_agent_config, include_claude_agent_config)
+    try:
+        documentation_writes = (
+            planned_documentation_index_writes(root) if _semver_tuple(target_version) >= (0, 10, 0) else {}
+        )
+        for relative, content in documentation_writes.items():
+            if not _present(root / relative) or _read(root / relative).encode("utf-8") != content:
+                proposed.append(
+                    {
+                        "path": relative,
+                        "action": "update" if _present(root / relative) else "create",
+                        "reason": "explicit managed documentation navigation",
+                    }
+                )
+    except NavigationError as exc:
+        conflicts.append(
+            {
+                "type": "index_migration_required",
+                "path": ".",
+                "requires_decision": "true",
+                "detail": "Documentation navigation requires an explicit ownership/path decision",
+            }
+        )
+        questions.append(f"How should the documentation navigation conflict {exc.code} be resolved?")
+    adoption = _release_adoption(root, target_version, reviewed_change_ids)
+    if adoption["pending_change_ids"]:
+        conflicts.append(
+            {
+                "type": "release_adoption_review_required",
+                "path": "AGENTS.md",
+                "detail": "Customized local documentation and instruction owners require bounded review",
+            }
+        )
+        blocking_types.add("release_adoption_review_required")
+    if adoption["adoption_status"] == "runtime_upgrade_required":
+        conflicts.append(
+            {
+                "type": "runtime_upgrade_required",
+                "path": "AGENTS.md",
+                "detail": "The installed skill does not cover the requested release",
+            }
+        )
+        blocking_types.add("runtime_upgrade_required")
     touched = {item["path"] for item in proposed}
     ownership = audit["ownership"]
     protected = set(ownership["protected"] + ownership["unknown"] + ownership["external_source_of_truth"])
@@ -958,6 +1140,8 @@ def build_migration_report(
         "historical_paths": ownership["historical"],
         "conflicts": conflicts,
         "instruction_contract": instruction_contract,
+        "release_adoption": adoption,
+        "documentation_navigation": _documentation_validation(root, target_version),
         "archive_indexes": check_plan_lifecycle(root)["archive_indexes"],
         "privacy_findings": privacy_findings,
         "privacy_review": privacy_review,
@@ -1029,6 +1213,14 @@ def _already_current(report: dict[str, Any], include_agent_config: bool, root: P
         and all(topology[name] for name in required_artifacts)
         and report["instruction_contract"]["success"]
         and report["archive_indexes"]["success"]
+        and report["documentation_navigation"]["success"]
+        and report["release_adoption"]["adoption_status"] == "resolved"
+        and assess_target_adoption(root, ".".join(map(str, _semver_tuple(report["target_version"]))))["adoption_status"]
+        == "resolved"
+        and not (
+            set(report["release_adoption"]["resolved_change_ids"])
+            - set(_optional_documentation_state(_read(root / STATE_MANIFEST_PATH)).get("adopted_change_ids", []))
+        )
         and not pristine_update_pending
         and _optional_agent_config_is_current(root, include_agent_config, topology)
         and _optional_claude_agent_config_is_current(root, report["include_claude_agent_config"])
@@ -1298,8 +1490,15 @@ def _manifest_text(
     include_agent_config: bool,
     existing_manifest: str = "",
     include_claude_agent_config: bool = False,
+    adopted_change_ids: list[str] | None = None,
+    owner_evidence: dict[str, str] | None = None,
 ) -> str:
     archive_path, archive_indexes = _manifest_archive_contract(existing_manifest)
+    documentation_state = _optional_documentation_state(existing_manifest)
+    if _semver_tuple(target_version) >= (0, 10, 0):
+        documentation_state.setdefault("documentation_roots", ["docs"])
+        documentation_state.setdefault("documentation_indexes", [])
+    source_ref, source_commit = _source_provenance()
     applied = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     lines = [
         "schema_version: 2",
@@ -1308,12 +1507,19 @@ def _manifest_text(
         f"applied_at: {_yaml_quote(applied)}",
         "mode: upgrade_target_workflow",
         f"source_repo: {_yaml_quote(CANONICAL_SOURCE_REPO)}",
-        f"source_ref: {_yaml_quote(target_version)}",
-        f"source_commit: {_yaml_quote(_source_commit())}",
+        f"source_ref: {_yaml_quote(source_ref)}",
+        f"source_commit: {_yaml_quote(source_commit)}",
         "managed_paths:",
         f"  - {STATE_MANIFEST_PATH}",
     ]
     lines.extend(f"  - {_yaml_quote(path)}" for path in archive_indexes)
+    if documentation_state.get("documentation_indexes"):
+        _, prior_managed = parse_manifest_path_list(existing_manifest, "managed_paths")
+        lines.extend(
+            f"  - {_yaml_quote(path)}"
+            for path in documentation_state["documentation_indexes"]
+            if path in prior_managed and path not in archive_indexes
+        )
     lines.append("shared_paths:")
     lines.extend(f"  - {_yaml_quote(path)}" for path in sorted(shared_paths))
     lines.append("protected_paths:")
@@ -1337,6 +1543,15 @@ def _manifest_text(
             "orchestration_contract_version: 3",
         ]
     )
+    if adopted_change_ids is not None:
+        documentation_state["adopted_change_ids"] = sorted(set(adopted_change_ids))
+    for key, values in documentation_state.items():
+        lines.append(f"{key}:" if values else f"{key}: []")
+        lines.extend(f"  - {_yaml_quote(value)}" for value in values)
+    evidence = owner_evidence if owner_evidence is not None else recorded_adoption_evidence(existing_manifest)
+    if evidence or _semver_tuple(target_version) >= (0, 10, 0):
+        lines.append("adoption_evidence:" if evidence else "adoption_evidence: {}")
+        lines.extend(f"  {identifier}: {_yaml_quote(digest)}" for identifier, digest in sorted(evidence.items()))
     return "\n".join(lines) + "\n"
 
 
@@ -1346,6 +1561,7 @@ def apply_migration(
     include_agent_config: bool = False,
     approved_privacy_review: str | None = None,
     include_claude_agent_config: bool = False,
+    reviewed_change_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     root = repo.resolve()
     expected_root_identity = _directory_identity(root)
@@ -1355,6 +1571,7 @@ def apply_migration(
         include_agent_config,
         approved_privacy_review,
         include_claude_agent_config,
+        reviewed_change_ids,
     )
     include_agent_config = report["include_agent_config"]
     include_claude_agent_config = report["include_claude_agent_config"]
@@ -1379,6 +1596,15 @@ def apply_migration(
             "update_status": "privacy_review_required",
             "mutation_log": [],
             "validation_result": {"success": False, "privacy": False},
+        }
+    if report["release_adoption"]["pending_change_ids"]:
+        return {
+            **report,
+            "success": False,
+            "mode": "apply",
+            "update_status": "release_adoption_review_required",
+            "agent_action": "review_release_adoption",
+            "mutation_log": [],
         }
     if not report["success"]:
         return {**report, "success": False, "mode": "apply", "update_status": "conflict", "mutation_log": []}
@@ -1405,6 +1631,7 @@ def apply_migration(
         changed: list[str] = []
         config_diff = ""
         final_privacy_findings: list[dict[str, int | str]] = []
+        template_transitions: dict[str, str] = {}
 
         try:
             protected_snapshots = {}
@@ -1457,7 +1684,9 @@ def apply_migration(
             for relative, (name, replacements) in template_map.items():
                 existing = read(relative) if secure.exists(relative) else ""
                 if not existing or _is_pristine_legacy(relative, existing):
-                    write(relative, _template(name, replacements))
+                    generated_text = _template(name, replacements)
+                    write(relative, generated_text)
+                    template_transitions[relative] = hashlib.sha256(generated_text.encode("utf-8")).hexdigest()
 
             try:
                 for relative, data in planned_index_writes(root).items():
@@ -1466,7 +1695,13 @@ def apply_migration(
                 if archive_layout.explicit:
                     for relative, data in planned_explicit_index_writes(root, archive_layout).items():
                         write(relative, data.decode("utf-8"))
-            except LifecycleError as exc:
+                navigation_writes = (
+                    planned_documentation_index_writes(root) if _semver_tuple(target_version) >= (0, 10, 0) else {}
+                )
+                for relative, data in navigation_writes.items():
+                    if read(relative).encode("utf-8") != data:
+                        write(relative, data.decode("utf-8"))
+            except (LifecycleError, NavigationError) as exc:
                 raise MigrationConflict(exc.code, str(exc)) from exc
 
             instruction_result = check_instruction_contract(root)
@@ -1475,6 +1710,9 @@ def apply_migration(
                     instruction_result["status"],
                     "Generated instruction contract did not validate",
                 )
+            documentation_result = _documentation_validation(root, target_version, mutation_log)
+            if not documentation_result["success"]:
+                raise MigrationConflict("documentation_validation_failed", "Managed documentation navigation failed")
             if include_agent_config:
                 existing_config = read(".codex/config.toml")
                 merged, config_diff = _merge_codex_config(existing_config)
@@ -1514,6 +1752,21 @@ def apply_migration(
                     for name in CLAUDE_AGENT_NAMES
                     if secure.exists(f".claude/agents/{name}.md")
                 )
+            final_adoption = assess_target_adoption(
+                root,
+                ".".join(map(str, _semver_tuple(target_version))),
+                report["release_adoption"]["resolved_change_ids"],
+            )
+            for identifier, snapshot in report["release_adoption"].get("owner_snapshot", {}).items():
+                expected_snapshot = dict(snapshot)
+                current_snapshot = final_adoption["owner_snapshot"][identifier]
+                for path, digest in template_transitions.items():
+                    if path in expected_snapshot or path in current_snapshot:
+                        expected_snapshot[path] = digest
+                if current_snapshot != expected_snapshot:
+                    raise MigrationConflict(
+                        "adoption_owner_changed", "Reviewed instruction owners changed during migration"
+                    )
             manifest = _manifest_text(
                 target_version,
                 report["protected_paths"],
@@ -1521,6 +1774,8 @@ def apply_migration(
                 include_agent_config,
                 read(STATE_MANIFEST_PATH),
                 include_claude_agent_config=include_claude_agent_config,
+                adopted_change_ids=report["release_adoption"]["resolved_change_ids"],
+                owner_evidence=final_adoption["owner_evidence"],
             )
             if scan_privacy_text(manifest):
                 raise MigrationConflict("unsafe_manifest", "Generated manifest contains private data")
@@ -1668,6 +1923,7 @@ def execute_prompt_upgrade(
     include_agent_config: bool = False,
     approved_privacy_review: str | None = None,
     include_claude_agent_config: bool = False,
+    reviewed_change_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run report-first migration for an authorized natural-language target-upgrade request."""
     report = build_migration_report(
@@ -1676,6 +1932,7 @@ def execute_prompt_upgrade(
         include_agent_config,
         approved_privacy_review,
         include_claude_agent_config,
+        reviewed_change_ids,
     )
     include_agent_config = report["include_agent_config"]
     if report["required_user_questions"]:
@@ -1700,6 +1957,26 @@ def execute_prompt_upgrade(
             "mode": "prompt",
             "update_status": "privacy_review_required",
             "agent_action": ("request_privacy_review_approval" if approval_required else "report_privacy_findings"),
+            "report_reviewed": True,
+            "mutation_log": [],
+        }
+    if report["release_adoption"]["adoption_status"] == "runtime_upgrade_required":
+        return {
+            **report,
+            "success": False,
+            "mode": "prompt",
+            "update_status": "runtime_upgrade_required",
+            "agent_action": "update_installed_skill_first",
+            "report_reviewed": True,
+            "mutation_log": [],
+        }
+    if report["release_adoption"]["pending_change_ids"]:
+        return {
+            **report,
+            "success": False,
+            "mode": "prompt",
+            "update_status": "release_adoption_review_required",
+            "agent_action": "review_release_adoption",
             "report_reviewed": True,
             "mutation_log": [],
         }
@@ -1756,6 +2033,7 @@ def execute_prompt_upgrade(
         include_agent_config,
         approved_privacy_review,
         include_claude_agent_config,
+        reviewed_change_ids,
     )
     if applied.get("update_status") == "question_required":
         agent_action = "ask_targeted_question"
@@ -1789,7 +2067,8 @@ def main() -> int:
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.9.10")
+    parser.add_argument("--target-version", default="0.10.0")
+    parser.add_argument("--reviewed-change", action="append", default=[])
     parser.add_argument("--include-agent-config", action="store_true")
     parser.add_argument("--include-claude-agent-config", action="store_true")
     parser.add_argument(
@@ -1807,6 +2086,7 @@ def main() -> int:
                 args.include_agent_config,
                 args.approve_privacy_review,
                 args.include_claude_agent_config,
+                args.reviewed_change,
             )
         elif args.apply:
             result = apply_migration(
@@ -1815,6 +2095,7 @@ def main() -> int:
                 args.include_agent_config,
                 args.approve_privacy_review,
                 args.include_claude_agent_config,
+                args.reviewed_change,
             )
         else:
             result = build_migration_report(
@@ -1823,6 +2104,7 @@ def main() -> int:
                 args.include_agent_config,
                 args.approve_privacy_review,
                 args.include_claude_agent_config,
+                args.reviewed_change,
             )
     except MigrationConflict as exc:
         selected_mode = "prompt" if args.prompt else ("apply" if args.apply else "plan")
