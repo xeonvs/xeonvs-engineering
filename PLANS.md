@@ -4,6 +4,109 @@ plan_schema_version: 2
 
 Use this file for active, blocked, ready-for-closure, or recently completed execution work. The canonical lifecycle is the installed `engineering-workflow` planning reference.
 
+## Active Plan: Import Documentation Workflow 0.10.0 And Release Marketplace 1.0.11
+
+Status: active
+Owner: root
+Last Updated: 2026-10-12
+
+### Goal
+
+Deliver the reviewed engineering-workflow 0.10.0 source release as unchanged catalog bytes, publish marketplace 1.0.11, verify local Codex/Claude installations, and close durable state.
+
+### Plan Origin
+
+plan_mode_approved
+
+### Requested Scope
+
+Run the existing selected-plugin sync action, review/merge its generated PR, validate and release the catalog, update local installations, and retain checked closure evidence.
+
+### Requirement Traceability
+
+| Requirement | Outcome | Work queue | Verification | Status |
+| --- | --- | --- | --- | --- |
+| REQ-001 | Immutable source bundle imported without byte changes | WQ-01, WQ-02 | Annotated stable tag, exact commit, tree digest and recorded provenance | done |
+| REQ-002 | Catalog checks and review complete before publication | WQ-03 | Fixture suite, catalog validator, recorded-upstream verification, CI and redacted secret gates | pending |
+| REQ-003 | Marketplace 1.0.11 assets match the intended catalog | WQ-04 | Annotated tag, release CI, archive checksum and cache exclusions | pending |
+| REQ-004 | Local Codex and Claude use verified enabled 0.10.0 bytes | WQ-05 | Native update/readback, exact bundle parity, installation policy | pending |
+| REQ-005 | Catalog/root plans close truthfully | WQ-06 | Lifecycle check and atomic closure, delivery reconciliation | pending |
+
+### Explicit Non-Goals
+
+No runtime source edits, tgrep-search update, new catalog dependencies, direct plugin-cache replacement, automatic target migration, or background monitoring.
+
+### Constraints
+
+Use the existing review-required sync workflow. Preserve catalog provenance format identity 1.0.0 independently from release tag 1.0.11. Keep tgrep-search 1.0.3 and all its bytes unchanged. Keep local paths, private values and raw logs out of public artifacts.
+
+### Inputs And Sources
+
+- User-approved documentation navigation and stable-update plan in the source repository.
+- https://github.com/xeonvs/codex-engineering-workflow
+- https://github.com/xeonvs/xeonvs-engineering
+
+### User Decisions And Answers
+
+- Full source/catalog release and local installation delivery are authorized.
+- Use the existing sync action and unchanged upstream bytes.
+- Automatic stable installation policy was explicitly selected; target changes remain proposal-only without target authorization.
+
+### Completed Baseline State
+
+- [x] Catalog 1.0.10 carries engineering-workflow 0.9.10 and tgrep-search 1.0.3.
+- [x] Source 0.10.0 implementation, local checks and independent review complete; source publication is the next prerequisite.
+
+### Current Work Queue
+
+- [x] WQ-01 — Publish/resolve the source 0.10.0 immutable tag for REQ-001. `done`
+- [x] WQ-02 — Dispatch selected-plugin sync, inspect generated PR/provenance and unchanged tgrep bytes for REQ-001. `done`
+- [ ] WQ-03 — Complete catalog checks, diff review, CI and merge for REQ-002. `in_progress`
+- [ ] WQ-04 — Publish/verify 1.0.11 tag and assets for REQ-003. `pending`
+- [ ] WQ-05 — Native local updates, enabled versions, byte parity and policy checks for REQ-004. `pending`
+- [ ] WQ-06 — Reconcile and close this/source plans for REQ-005. `pending`
+
+### Locked Decisions
+
+Marketplace 1.0.11 if live tags remain unchanged; no edits inside imported bundles. A native failure or unknown readback is not installation success.
+
+### Verification
+
+Use authorized disposable fixture tests, validate_catalog.py, sync_upstreams.py --verify-recorded, privacy/Gitleaks scans and exact CI jobs. Verify the release archive checksum and absence of executable caches; compare active local bundles with recorded upstream digest.
+
+### Latest Validation Results
+
+Source final and fresh released-clone full gates passed 9/9; privacy/Gitleaks passed 3/3; independent review findings resolved. Source PR #23 merged with both CI jobs green; annotated v0.10.0 is published at 93f5163396aecc3005fe37df969ae771b78ddd34. Sync run 38240471498 succeeded and opened draft catalog PR #24. Catalog 16 tests, validator and recorded-upstream byte verification passed; bundle SHA-256 is bff29b06f8672492a594de3b9595781ac0803e5d09b8ffffc2c2262a9ce031d1. No tgrep-search paths or provenance changed. CI/security/merge remain WQ-03.
+
+### Risks And Recovery
+
+Unreleased or drifting bytes block import/update. Preserve immutable tags and recovery state; use native plugin commands only. Failed CI blocks merge/release. Keep prior installs and report partial native state honestly.
+
+### Resume Point
+
+Complete WQ-03 final security and CI, merge PR #24, then publish WQ-04 marketplace 1.0.11.
+
+### Plan Fidelity Check
+
+- [x] Requirements, sources, decisions, constraints, ordered work and validation cover the complete requested outcome.
+- [x] No user-owned content or remaining work was silently omitted.
+
+### Reconciliation Check
+
+- [ ] Current catalog, provenance, checks, delivery and plan state agree.
+
+### Closure Gate
+
+- [ ] Every requirement and queue item is terminal; applicable checks and review are current; no stale resume work remains.
+
+### Post-Close Delivery
+
+Final closure documentation changes no released bundle or artifact contract.
+
+### Handoff Notes
+
+Root retains integration and publication ownership; no external handoff.
+
 ## Recently Completed
 
 - [x] 2026-09-23: Completed Import Privacy Review V2 Workflow 0.9.9.
