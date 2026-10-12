@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "skill_version": "0.10.0",
+  "changes": [
+    {
+      "id": "documentation-navigation-v1",
+      "introduced_in": "0.10.0",
+      "summary": "Discover documentation owners and show a bounded map on entry or recovery.",
+      "affected_owner_patterns": ["AGENTS.md", "docs/**/README.md", "docs/engineering/project_principles.md"],
+      "adoption_requirement": "semantic_review"
+    },
+    {
+      "id": "documentation-maintenance-v1",
+      "introduced_in": "0.10.0",
+      "summary": "Maintain affected documents and managed navigation with the corresponding change.",
+      "affected_owner_patterns": ["AGENTS.md", "docs/engineering/project_principles.md", "docs/**/document_writing.md", "docs/**/README.md"],
+      "adoption_requirement": "semantic_review"
+    },
+    {
+      "id": "stable-update-target-adoption-v1",
+      "introduced_in": "0.10.0",
+      "summary": "Distinguish installed skill releases from reviewed adoption of target workflow changes.",
+      "affected_owner_patterns": ["AGENTS.md", "docs/codex/ENGINEERING_WORKFLOW_STATE.yaml"],
+      "adoption_requirement": "semantic_review"
+    },
+    {
+      "id": "approved-document-restructuring-v1",
+      "introduced_in": "0.10.0",
+      "summary": "Use an exact approved snapshot and preserve dependencies for document restructuring.",
+      "affected_owner_patterns": ["AGENTS.md", "docs/engineering/project_principles.md", "docs/**/document_writing.md"],
+      "adoption_requirement": "semantic_review"
+    },
+    {
+      "id": "stable-skill-update-runtime-v1",
+      "introduced_in": "0.10.0",
+      "summary": "Check trusted stable releases with installation-scoped policy and verified native delivery.",
+      "affected_owner_patterns": [],
+      "adoption_requirement": "runtime_only"
+    }
+  ]
+}

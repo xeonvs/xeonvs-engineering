@@ -2,6 +2,26 @@
 
 Use this canonical reference when a user asks to reread, refresh, download, or update the installed `engineering-workflow` skill. A refresh prompt may orchestrate a safe installed-skill update, but it never implies target-repository migration.
 
+## Stable Release And Installation Policy
+
+Use a published stable annotated SemVer release from the canonical source by default, not its development branch. An explicit development ref remains available for a development request. For plugin-managed installations, distinguish the latest source release from the validated release already distributed by the canonical marketplace; a source release waiting for catalog import is `delivery_pending`, not permission to replace a plugin cache directly.
+
+The installation-scoped policy is `automatic_stable` only after explicit selection, or `notify_only` when no policy was selected. Store policy, minimal check metadata, and proposal suppression outside targets and plugin caches. A target manifest cannot silently grant installation-update permission. At a new session, reuse a successful remote check for up to 24 hours; an explicit update or `--force-check` bypasses that cache. Do not create a background polling loop. Never cache an upstream failure as proof of currentness.
+
+Use `scripts/workflow_updates.py --repo-root <target> --install-path <active-skill> --refresh --platform <actual-host>` at repository entry to honor the selected installation policy and check cache. `--refresh` permits application only under explicit automatic policy; legacy notification-only policy remains check/proposal-only. Read-only check without `--refresh` is the default. With authorized automatic policy or an explicit update request, execute the existing trusted updater/native plugin path, re-resolve the active install path, verify version/provenance and byte identity, then reread the resulting skill and applicable references before dependent work. A mismatch or failed native update is not success. With multiple supported manifests, resolve the actual invoking platform rather than updating another client's installation implicitly.
+
+When upstream is unavailable, return `currentness: unknown` and continue ordinary work using the current installation. A local-only reread remains network-free. Dirty/divergent installations, alternate sources, downgrades, and runtime restrictions retain their existing boundaries.
+
+## Target Update Recommendation
+
+After verified skill refresh or detection of target drift, compare available, installed, loaded, and target-applied versions and applicable adoption change IDs. Return a read-only proposal naming affected local instruction owners, documentation, navigation, optional profiles, validation, and the next requested action. Do not migrate a target merely because the skill updated.
+
+Suppress an identical proposal for the same target and candidate in local installation state; an explicitly declined proposal remains suppressed until the candidate changes or the user explicitly asks. Do not keep source documents, user-private values, or raw logs in that state. Periodic documentation audits remain a separate opt-in under `documentation_navigation.md`.
+
+In the skill's own source repository, retain the source-maintainer boundary: check the installation normally, but leave source instruction adoption to direct maintainer review rather than loading donor `AGENTS.md` as target authority or proposing target scaffolding over it.
+
+Applicable adoption requirements come from the packaged `assets/release_adoption.json`. The descriptor records current required capabilities with stable change IDs and introduced versions, so skipping releases still requires every applicable unresolved change. It is data for bounded owner review, not executable fetched code or a phrase-based semantic validator. `target_workflow_upgrade.md` owns review and recording accepted changes.
+
 ## Contents
 
 1. Invocation Semantics
@@ -85,7 +105,7 @@ Alternate upstream apply requires explicit confirmation after structural inspect
 
 - Detect a skill nested under a plugin root with a Codex or Claude plugin manifest before resolving copied-tree or Git-checkout replacement.
 - Never replace a marketplace cache directory directly, even when its skill bytes resemble a standalone copy.
-- Return `installation_type: plugin_managed`, `recommended_action: marketplace_update`, the detected platform(s), and marketplace update/reinstall commands with `direct_cache_replacement_allowed: false`.
+- Return `installation_type: plugin_managed`, verified source/delivery candidates, the detected platform(s), and marketplace update/reinstall instructions with `direct_cache_replacement_allowed: false`. Native apply verifies the reviewed candidate and the resulting active installation.
 - Codex refreshes the marketplace with `codex plugin marketplace upgrade xeonvs-engineering` and reinstalls with `codex plugin add engineering-workflow@xeonvs-engineering`.
 - Claude Code uses `claude plugin marketplace update xeonvs-engineering`, `claude plugin update engineering-workflow@xeonvs-engineering`, then `/reload-plugins`.
 
@@ -180,6 +200,6 @@ After a successful update:
 2. Report the installed version and whether update or refresh-only occurred.
 3. Continue the lifecycle prompt under the refreshed instructions when Codex exposes the change.
 4. Restart or start a new task only when automatic detection does not expose it.
-5. Keep target migration separate unless the user's prompt also explicitly requests that repository mutation after refreshed instructions are active.
+5. Return any applicable target upgrade recommendation; perform migration only under the user's target-update request after refreshed instructions are active.
 
 Current Build Skills documentation detects changed skills automatically and recommends restart only when the change does not appear. The official installer still uses `$CODEX_HOME/skills`; current authoring discovery also includes repository/user `.agents/skills`, admin, system, copied, and symlinked locations. Never assume one universal installation directory.

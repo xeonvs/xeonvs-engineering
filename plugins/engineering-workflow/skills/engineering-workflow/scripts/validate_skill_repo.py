@@ -21,8 +21,10 @@ from common import (  # noqa: E402
     scan_privacy_text,
     validate_plan_schema,
 )
+from documentation_navigation import check_documentation  # noqa: E402
 from instruction_contract import check_instruction_contract  # noqa: E402
 from plan_lifecycle import check_archive_indexes, closure_issues  # noqa: E402
+from release_adoption import load_descriptor  # noqa: E402
 
 REQUIRED_PATHS = (
     "AGENTS.md",
@@ -38,6 +40,12 @@ REQUIRED_PATHS = (
     "skill/engineering-workflow/SKILL.md",
     "skill/engineering-workflow/agents/openai.yaml",
     "skill/engineering-workflow/scripts/common.py",
+    "skill/engineering-workflow/scripts/documentation_navigation.py",
+    "skill/engineering-workflow/scripts/documentation_restructure.py",
+    "skill/engineering-workflow/scripts/workflow_updates.py",
+    "skill/engineering-workflow/scripts/release_adoption.py",
+    "skill/engineering-workflow/assets/release_adoption.json",
+    "skill/engineering-workflow/references/documentation_navigation.md",
     "skill/engineering-workflow/scripts/repo_audit.py",
     "skill/engineering-workflow/scripts/assess_programmatic_stage.py",
     "skill/engineering-workflow/scripts/plan_bootstrap.py",
@@ -105,6 +113,7 @@ SKILL_REQUIRED_MARKERS = (
 SKILL_REQUIRED_REFERENCES = (
     "references/planning_and_backlog.md",
     "references/instruction_lifecycle.md",
+    "references/documentation_navigation.md",
     "references/platform_compatibility.md",
     "references/agent_orchestration.md",
     "references/model_profiles.md",
@@ -134,6 +143,8 @@ README_REQUIRED_HEADINGS = (
     "## Versioning and updates",
 )
 CANONICAL_OWNER_MARKERS = {
+    "## Documentation Entry Map": "skill/engineering-workflow/references/documentation_navigation.md",
+    "## Documentation Impact And Freshness": "skill/engineering-workflow/references/documentation_navigation.md",
     "## Full Active Plan Schema": "skill/engineering-workflow/references/planning_and_backlog.md",
     "## Deterministic Route": "skill/engineering-workflow/references/agent_orchestration.md",
     "## Programmatic Tool Route": "skill/engineering-workflow/references/agent_orchestration.md",
@@ -794,11 +805,27 @@ def validate_skill_repo(repo_root: Path) -> dict:
         }
     router_errors, version = _validate_skill_router(root)
     errors.extend(router_errors)
+    try:
+        descriptor = load_descriptor(
+            json.loads((root / "skill/engineering-workflow/assets/release_adoption.json").read_text(encoding="utf-8"))
+        )
+        if descriptor["skill_version"] != version:
+            errors.append("Release adoption descriptor version does not match the active skill version")
+    except (OSError, ValueError):
+        errors.append("Release adoption descriptor is invalid")
     errors.extend(_validate_readme(root, version))
     errors.extend(_validate_plan_contract(root))
     errors.extend(_validate_instruction_assets(root))
     errors.extend(_validate_root_agents_boundary(root))
     errors.extend(_validate_source_indexes(root))
+    documentation = check_documentation(root, roots=["docs", "skill/engineering-workflow/references"])
+    errors.extend(
+        f"Documentation navigation error: {item['code']} in {item['path']}" for item in documentation["errors"]
+    )
+    warnings.extend(
+        f"Documentation navigation warning: {item['code']} in {item.get('path', '.')}"
+        for item in documentation["warnings"]
+    )
     errors.extend(_validate_canonical_owners(root))
     errors.extend(_validate_agent_profiles(root))
     errors.extend(_validate_claude_agent_profiles(root))

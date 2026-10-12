@@ -11,6 +11,7 @@ The workflow layer uses one clear owner per concern and does not absorb reposito
 - `docs/codex/AGENT_EXECUTION_PITFALLS.md`: non-normative incident classes, causes, owner/route/guard links, evidence, and retirement
 - `docs/codex/ENGINEERING_WORKFLOW_STATE.yaml`: explicit migration/version/ownership state for listed paths only, including the optional plan-archive graph and atomic active-plan state owned by `planning_and_backlog.md`
 - managed navigation indexes: `docs/README.md`, `docs/codex/README.md`, `docs/engineering/README.md`, and lazily created archive indexes
+- optional `documentation_roots`, `documentation_indexes`, `adopted_change_ids`, and `adoption_evidence` in the state manifest: explicit discovery/index configuration and verified release adoption bound to local instruction/writing owners; no broad directory ownership
 
 ## Optional Files
 
@@ -39,3 +40,5 @@ Do not infer ownership from broad directory prefixes. A file under `docs/codex/`
 - unrelated archived research
 
 Route those sources from `AGENTS.md` when useful; do not rewrite, absorb, or restate them without explicit authorization.
+
+For documentation maps, upkeep, existing writing owners, and exact approved restructuring use `documentation_navigation.md`. For installation policy and a target update proposal use `skill_update.md`; a newer installation alone does not authorize changing this repository.

@@ -25,6 +25,7 @@ Use this canonical reference for `upgrade_target_workflow`, which migrates the w
 Treat `Upgrade A Target Workflow` plus a target repository as an authorized repo-changing prompt, not as a request for CLI instructions.
 
 1. Resolve the target path and requested version from context; default to the installed skill version.
+   Read applicable unresolved IDs from `assets/release_adoption.json`. Version 0.10.0 adds compact documentation entry/maintenance routes, compatible documentation roots/index configuration, and release-adoption proposals. Existing local writing owners remain authoritative; discover and link them rather than replacing them. A release-aware proposal identifies these affected owners before target mutation.
 2. Before prompt apply, review target-local owners affected by the requested release's changed semantics when adoption has not already been established. For customized owners, preserve equivalent rules or make the narrow requested correction under the full planning and privacy gates; ask only for a real ownership conflict. A same-version stamp or `already_current` result proves structural state, not semantic adoption. Version 0.9.10 fixes custom archive index preservation and adds separately opted-in Claude project agents; it requires no target-local instruction rewrite. Version 0.9.9 changes only the installed migration privacy-review boundary and requires no target-local instruction rewrite. Version 0.9.8 updates Codex model profiles and refreshes only exact prior generated agent templates when that configuration was already opted in; it requires no target-local instruction rewrite. Version 0.9.7 changes audit discovery and output only, so it also requires no target-local instruction rewrite. For the 0.9.6 changes, inspect the task-handoff route and efficient-execution owner for root working state, self-contained worker context, transient-versus-durable evidence, and artifact-based recovery. Use already-current evidence, and do not sweep unrelated owners. Then invoke `scripts/upgrade_target_workflow.py --prompt` yourself.
 3. Prompt mode builds and reviews the read-only migration report first.
 4. If ownership, conflicts, privacy, and approvals are resolved, it proceeds through guarded apply and validation automatically.
@@ -48,6 +49,7 @@ The user may explicitly request report-only behavior; then invoke `--plan`. Code
 - `--target-version`
 - `--include-agent-config`
 - `--include-claude-agent-config`
+- `--reviewed-change` (repeatable agent-reviewed adoption ID)
 - `--approve-privacy-review`
 - `--format json`
 
@@ -133,6 +135,12 @@ Before apply, return:
 - required user questions
 - validation plan
 - rollback plan
+
+Include applicable adoption IDs, already recorded IDs, IDs satisfiable by missing/pristine generated templates, and unresolved customized-owner review. A structurally valid same-version target may still return `review_release_adoption`; it must not return adopted/current solely because its version matches. The root reviews the exact affected owners, preserves equivalent local meaning or makes the narrow authorized change, then supplies only verified `--reviewed-change` IDs. Unknown or inapplicable IDs are refused; this argument does not approve restructuring, privacy findings, or installation changes.
+
+Preserve optional `documentation_roots`, `documentation_indexes`, `adopted_change_ids`, and `adoption_evidence` across upgrades. Roots specify discovery scope only; index ownership still requires explicit managed sections or declared paths. Record resolved applicable IDs only after instruction/navigation validation and the semantic review required for customized owners. Evidence fingerprints bind accepted IDs to local instruction and writing-owner bytes, excluding ordinary domain-document changes and generated index bodies. Missing or changed evidence requires renewed bounded review; fingerprints preserve a reviewed decision, not prove meaning automatically.
+
+Installation/version provenance must describe verified source identity. Resolve a stable release tag and source commit through trusted installation or marketplace evidence; when unavailable, mark provenance unresolved instead of inventing a confirmed tag from the target version or mistaking a catalog commit for the upstream source commit.
 
 The report always includes `privacy_review_contract_version: 2` through the stable `privacy_review` object:
 
