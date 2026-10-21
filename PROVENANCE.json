@@ -14,13 +14,13 @@
     },
     {
       "name": "tgrep-search",
-      "version": "1.0.3",
+      "version": "1.1.0",
       "source_repository": "https://github.com/xeonvs/tgrep-search",
       "source_policy": "latest-tag",
-      "source_ref": "v1.0.3",
-      "source_commit": "040a6389a1802fa44b9d511b493cb532867f41f6",
+      "source_ref": "v1.1.0",
+      "source_commit": "115976a0a590582ffedd4ce0e58b79861b99b2e9",
       "source_path": "plugins/tgrep-search",
-      "bundle_sha256": "6ec5d9e0278e7ed5900f1fd5f44f375b5d724678aa7326ca3f1682a0f99a61da"
+      "bundle_sha256": "266566c232528624b8913bd5b1e34d87347d5e0669c4779c8ec6cdfb454aac72"
     }
   ]
 }
