@@ -39,7 +39,7 @@ Run the existing upstream sync; review source provenance and exact bytes; releas
 
 | Requirement | Complete outcome | Source | Work queue | Acceptance or validation | Status |
 | --- | --- | --- | --- | --- | --- |
-| REQ-001 | Exact released tgrep-search 1.1.0 import, other plugin unchanged | approved full-cycle plan | WQ-01 | provenance, byte parity, unchanged engineering digest | pending |
+| REQ-001 | Exact released tgrep-search 1.1.0 import, other plugin unchanged | approved full-cycle plan | WQ-01 | provenance, byte parity, unchanged engineering digest | done |
 | REQ-002 | Validated immutable marketplace 1.0.12 release | approved plan | WQ-02 | catalog tests, verifier, security, CI, release assets | pending |
 | REQ-003 | Enabled native Codex/Claude installations match released bytes | approved plan | WQ-03 | native lists and installed file parity | pending |
 | REQ-004 | Reviewed outcome and checked lifecycle closure | approved plan | WQ-04 | requirement reconciliation and compact close | pending |
@@ -75,8 +75,8 @@ Run the existing upstream sync; review source provenance and exact bytes; releas
 ### Current Work Queue
 
 - [x] WQ-05 — Audit/update pinned Actions and applicable dependencies (REQ-005). `done`
-- [ ] WQ-01 — After source release, run native sync and verify exact candidate import (REQ-001). `pending`
-- [ ] WQ-02 — Validate/review, merge through PR and release 1.0.12 with asset readback (REQ-002). `pending`
+- [x] WQ-01 — After source release, run native sync and verify exact candidate import (REQ-001). `done`
+- [ ] WQ-02 — Validate/review, merge through PR and release 1.0.12 with asset readback (REQ-002). `in_progress`
 - [ ] WQ-03 — Native marketplace/plugin updates and installed-byte readback (REQ-003). `pending`
 - [ ] WQ-04 — Aggregate review, reconcile source/catalog state and canonical closure (REQ-004). `pending`
 
@@ -95,7 +95,10 @@ Run the existing upstream sync; review source provenance and exact bytes; releas
 
 ### Latest Validation Results
 
-- 2026-10-21: dependency slice passed 16/16 tests, validate_catalog and verify-recorded on Python 3.15.0. Official stable refs confirm checkout v7.0.1 and action-gh-release v3.0.3 already current; setup-python updated to v7.0.0 pinned SHA, Node 24. All three workflows use stable Python 3.15; no third-party Python project dependencies exist. Final import validation still requires source release.
+- 2026-10-21: dependency slice passed 16/16 tests, validate_catalog and verify-recorded on Python 3.15.0. Official stable refs confirm checkout v7.0.1 and action-gh-release v3.0.3 already current; setup-python updated to v7.0.0 pinned SHA, Node 24. All three workflows use stable Python 3.15; no third-party Python project dependencies exist.
+- Source v1.1.0 is published at 115976a0a590582ffedd4ce0e58b79861b99b2e9; its downloaded archive checksum and full plugin bytes verified. Native sync run 39613267622 dispatched from reviewed dependency branch codex/tgrep-1-1-0 for tgrep-search only; no unrelated open sync PR existed at dispatch.
+- Native sync succeeded and created Draft PR https://github.com/xeonvs/xeonvs-engineering/pull/26. Imported plugin tree equals downloaded source release; tgrep bundle digest 266566c232528624b8913bd5b1e34d87347d5e0669c4779c8ec6cdfb454aac72. Engineering-workflow bytes and provenance remain unchanged (digest bff29b06f8672492a594de3b9595781ac0803e5d09b8ffffc2c2262a9ce031d1).
+- Final candidate passed 16/16 tests, validate_catalog, verify-recorded and strict Claude marketplace validation; documentation check has no errors (existing unsupported HTML logo and absent docs root warnings only). Aggregate diff review confirms expected dependency, plan, provenance and exact-bundle changes only.
 
 ### Risks And Recovery
 
@@ -105,7 +108,7 @@ Run the existing upstream sync; review source provenance and exact bytes; releas
 
 ### Resume Point
 
-- WQ-01: after verified source release, dispatch tgrep-search-only sync and review the exact candidate import.
+- WQ-02: commit reconciled plan, run pre-push scans, make reviewed PR ready, require green CI, merge and publish immutable v1.0.12.
 
 ### Plan Fidelity Check
 
