@@ -22,11 +22,13 @@ class SyncConfigurationTest(unittest.TestCase):
             path.name: path.read_text()
             for path in sorted((ROOT / '.github/workflows').glob('*.yml'))
         }
-        setup_python = 'actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1'
+        setup_python = 'actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97'
         release_action = 'softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64'
 
         for name in ('ci.yml', 'release.yml', 'sync-upstreams.yml'):
             self.assertIn(setup_python, workflows[name])
+            self.assertIn('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', workflows[name])
+            self.assertIn("python-version: '3.15'", workflows[name])
         self.assertIn(release_action, workflows['release.yml'])
         combined = '\n'.join(workflows.values())
         self.assertNotIn(
