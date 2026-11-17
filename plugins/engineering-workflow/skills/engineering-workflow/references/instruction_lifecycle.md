@@ -48,10 +48,11 @@ Use stable domain-oriented IDs. Moving a rule preserves its ID and updates its o
 
 ## Route Contract
 
-Define routes in target `AGENTS.md` with a machine-readable marker followed by a human-readable table row:
+Define routes in target `AGENTS.md` with a machine-readable marker followed by a readable instruction. The shipped router uses a bullet for each route:
 
 ```markdown
 <!-- ew:route id="provider-change" triggers="providers/**|integrations/**" owners="docs/providers.md" guards="test:provider-contract" -->
+- `provider-change` — Follow `docs/providers.md` and run the provider contract checks it names.
 ```
 
 Required attributes are `id`, `triggers`, `owners`, and `guards`. Separate multiple values with `|`. A local owner path must exist. A `skill://engineering-workflow/...` owner denotes a canonical installed-skill reference and is not resolved inside the target repository.
@@ -67,6 +68,8 @@ Supported guard kinds are:
 - `harness:<identifier>`;
 - `release_gate:<identifier>`;
 - `manual_review:<bounded rationale>`.
+
+Guard values identify checks in route metadata. Point readers to the applicable check in the owner document.
 
 Use executable guards whenever behavior is mechanically observable. `manual_review` is allowed only when the condition depends on judgment that cannot be encoded safely; its rationale must name the evidence to inspect. A phrase-presence assertion is not a behavioral guard when it merely forces the same rule into several files.
 
@@ -110,6 +113,8 @@ When a compatible release changes semantics inside the same instruction contract
 Exact normalized duplicate invariant bodies are errors. High-similarity bodies are review warnings, because similarity alone is not enough to prove semantic identity. Conflicting plan exceptions are errors even when phrased as a “compact checked queue” rather than a “compact plan.”
 
 ## Validation Outcome
+
+From the installed skill directory, run `python3 scripts/instruction_contract.py check --repo-root <target>` to validate the target's instruction graph.
 
 The instruction-contract check returns routes, invariants, incidents, errors, warnings, and one status:
 

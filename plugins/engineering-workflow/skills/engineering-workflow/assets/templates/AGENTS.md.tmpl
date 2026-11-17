@@ -38,10 +38,10 @@ At a new session or material context recovery, follow the installed documentatio
 - `task-handoff` — For delegation, recovery, handoff, or large outputs, follow the installed orchestration and planning references. Check the handoff scope, evidence access, durable state and root acceptance.
 
 <!-- ew:route id="planning" triggers="PLANS.md|docs/codex/TASKS_BACKLOG.md|docs/archive/**|workflow-state plan archive|plan closure" owners="skill://engineering-workflow/references/planning_and_backlog.md" guards="lint:plan-lifecycle" -->
-- `planning` — For plans, backlog, archives and closure, follow the installed planning reference and run `lint:plan-lifecycle`.
+- `planning` — For plans, backlog, archives and closure, follow the installed planning reference and use its plan lifecycle check.
 
 <!-- ew:route id="workflow-instructions" triggers="AGENTS.md|docs/engineering/**|docs/codex/AGENT_EXECUTION_PITFALLS.md" owners="skill://engineering-workflow/references/instruction_lifecycle.md|docs/engineering/project_principles.md" guards="lint:instruction-contract" -->
-- `workflow-instructions` — For changes to instruction owners, routes or incidents, follow the instruction lifecycle and project principles. Run `lint:instruction-contract`.
+- `workflow-instructions` — For changes to instruction owners, routes or incidents, follow the instruction lifecycle and project principles. Validate the instruction graph with the check in the lifecycle reference.
 
 <!-- ew:route id="repository-change" triggers="**" owners="docs/engineering/project_principles.md" guards="manual_review:run repository gates mapped by the owner" -->
 - `repository-change` — For every repository change, apply the project principles and the gates named by the relevant domain owners.

@@ -122,7 +122,7 @@ Completed sections must not retain stale next-work, resume, current-milestone, a
 
 ## Closure State Machine
 
-Use `scripts/plan_lifecycle.py check` before closure and `scripts/plan_lifecycle.py close` for the transition. Do not close a plan by manually editing only `Status`.
+From the installed skill directory, run `python3 scripts/plan_lifecycle.py check --repo-root <target>` before closure. Use `python3 scripts/plan_lifecycle.py close --repo-root <target> --disposition compact` for compact closure, or select `archive` when the plan should be retained. The lifecycle command updates the active plan and the associated state.
 
 The valid path is:
 
