@@ -4,7 +4,7 @@ description: Search a local source tree efficiently with the tgrep trigram index
 license: MIT
 metadata:
   compatibility: Codex, Claude Code, OpenCode, and terminal-capable agents
-  tested_tgrep_version: 1.2.4
+  tested_tgrep_version: 1.2.7
 ---
 
 # tgrep Search
@@ -52,7 +52,7 @@ setup and normal authorization permits it.
    checkout, or a platform-appropriate official GitHub Release. Verify
    `tgrep --help` afterwards. Do not substitute a similarly named package or an
    unverified binary. Respect the agent's normal installation and approval
-   boundary. This guidance is checked against tgrep 1.2.4; inspect the installed
+   boundary. This guidance is checked against tgrep 1.2.7; inspect the installed
    version/help before using newer modes. Keep an existing package-manager
    installation under that manager rather than overwriting its executable.
 2. Index only the assigned workspace or another explicitly approved root. An
@@ -181,7 +181,7 @@ applied.
   absence in the index does not prove absence from the workspace.
 
 For other flags and mode differences, consult the
-[official CLI documentation](https://github.com/microsoft/tgrep/blob/v1.2.4/README.md)
+[official CLI documentation](https://github.com/microsoft/tgrep/blob/v1.2.7/README.md)
 rather than assuming complete ripgrep equivalence. Older binaries may reject
 the current index format; a downgrade requires rebuilding with the older
 binary, preferably in a separate index directory, not deleting shared storage.

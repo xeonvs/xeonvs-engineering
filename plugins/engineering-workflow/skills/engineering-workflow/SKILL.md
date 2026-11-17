@@ -2,7 +2,7 @@
 name: engineering-workflow
 description: Set up, audit, or upgrade repository workflow instructions and planning. Use for workflow changes or explicit skill refresh/update; ordinary repository work does not invoke migration.
 metadata:
-  version: 0.10.0
+  version: 0.11.0
 ---
 
 # Engineering Workflow

@@ -104,11 +104,20 @@ LEGACY_PRISTINE_HASHES = {
     },
 }
 
-# Exact agent-template bytes shipped in 0.9.7. No customized target file is rewritten.
+# Exact agent-template bytes shipped in 0.9.7 and 0.9.8 through 0.10.0.
 PRIOR_AGENT_TEMPLATE_HASHES = {
-    "utility": "2f32f34a8c23d66c037abd0d1466f1eebc41ee52fd5e1e422470b7fbead4c210",
-    "explorer": "cf28d059b8bc28123a038d2f4c40fe24fe45e5623d2ee73c0e2b81f0a1d381b4",
-    "reviewer": "6182122fcec3d18b14acdabb644b750e58c5d2264d8b7a68eaf54644ef6db133",
+    "utility": {
+        "2f32f34a8c23d66c037abd0d1466f1eebc41ee52fd5e1e422470b7fbead4c210",
+        "40431d11ff23ef2a295d5f4e6a4303c99d43af79ddc052cf1003a896c2faf1ed",
+    },
+    "explorer": {
+        "cf28d059b8bc28123a038d2f4c40fe24fe45e5623d2ee73c0e2b81f0a1d381b4",
+        "d3809be66e50a4c594b865921f438c3ebfc4595529fcd5c35a14a56ac047aeb7",
+    },
+    "reviewer": {
+        "6182122fcec3d18b14acdabb644b750e58c5d2264d8b7a68eaf54644ef6db133",
+        "e9490fb1a0857e4eb86cd71d7e6bc472336a21efb56f8b7f9b257713fc3c1b4c",
+    },
 }
 PRIOR_CLAUDE_AGENT_TEMPLATE_HASHES = {
     "workflow-utility": {"8203a37549a6face81c6db37678752a4d237876e8cf3d269a7b606aa4709cbdb"},
@@ -126,7 +135,11 @@ def _is_pristine_legacy(relative: str, text: str) -> bool:
 
 
 def _is_pristine_prior_agent(name: str, text: str) -> bool:
-    return _content_hash(text) == PRIOR_AGENT_TEMPLATE_HASHES[name]
+    return _content_hash(text) in PRIOR_AGENT_TEMPLATE_HASHES[name]
+
+
+def _codex_agent_template(name: str) -> str:
+    return (AGENT_TEMPLATE_ROOT / f"{name}.toml.tmpl").read_text(encoding="utf-8")
 
 
 def _is_pristine_prior_claude_agent(name: str, text: str) -> bool:
@@ -543,7 +556,7 @@ class _SecureRoot:
             os.close(parent)
 
 
-def _read(path: Path) -> str:
+def _read(path: Path, *, exact: bool = False) -> str:
     if path.is_symlink():
         try:
             return os.readlink(path)
@@ -552,7 +565,7 @@ def _read(path: Path) -> str:
     if any(parent.is_symlink() for parent in path.parents):
         return ""
     try:
-        return path.read_text(encoding="utf-8")
+        return path.read_bytes().decode("utf-8") if exact else path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return ""
 
@@ -931,10 +944,12 @@ def _proposed_changes(
                 changes.append(
                     {"path": path, "action": "create", "reason": "explicit optional agent configuration request"}
                 )
-            elif _is_pristine_prior_agent(name, _read(root / path)):
-                changes.append(
-                    {"path": path, "action": "update", "reason": "known pristine prior agent template fingerprint"}
-                )
+            else:
+                existing = _read(root / path, exact=True)
+                if existing != _codex_agent_template(name) and _is_pristine_prior_agent(name, existing):
+                    changes.append(
+                        {"path": path, "action": "update", "reason": "known pristine prior agent template fingerprint"}
+                    )
     if include_claude_agent_config:
         for name in CLAUDE_AGENT_NAMES:
             path = f".claude/agents/{name}.md"
@@ -1064,6 +1079,13 @@ def build_migration_report(
         elif finding.get("requires_decision") == "true":
             questions.append(f"Which source should own the contradictory planning rule in {finding['path']}?")
     proposed = _proposed_changes(root, include_agent_config, include_claude_agent_config)
+    required_codex_models = sorted(
+        {
+            tomllib.loads(_codex_agent_template(Path(change["path"]).stem))["model"]
+            for change in proposed
+            if change["path"].startswith(".codex/agents/")
+        }
+    )
     try:
         documentation_writes = (
             planned_documentation_index_writes(root) if _semver_tuple(target_version) >= (0, 10, 0) else {}
@@ -1146,6 +1168,7 @@ def build_migration_report(
         "privacy_findings": privacy_findings,
         "privacy_review": privacy_review,
         "proposed_changes": proposed,
+        "required_codex_models": required_codex_models,
         "untouched_files": sorted(path for path in protected if path not in touched),
         "required_user_questions": questions,
         "validation_plan": [
@@ -1562,6 +1585,8 @@ def apply_migration(
     approved_privacy_review: str | None = None,
     include_claude_agent_config: bool = False,
     reviewed_change_ids: list[str] | None = None,
+    *,
+    available_codex_models: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     root = repo.resolve()
     expected_root_identity = _directory_identity(root)
@@ -1608,6 +1633,17 @@ def apply_migration(
         }
     if not report["success"]:
         return {**report, "success": False, "mode": "apply", "update_status": "conflict", "mutation_log": []}
+    missing_models = sorted(set(report["required_codex_models"]).difference(available_codex_models))
+    if missing_models:
+        return {
+            **report,
+            "success": False,
+            "mode": "apply",
+            "update_status": "codex_model_availability_required",
+            "agent_action": "verify_codex_models",
+            "unverified_codex_models": missing_models,
+            "mutation_log": [],
+        }
     if _already_current(report, include_agent_config, root):
         return _already_current_result(report, mode="apply")
 
@@ -1721,11 +1757,16 @@ def apply_migration(
                 for name in ("utility", "explorer", "reviewer"):
                     relative = f".codex/agents/{name}.toml"
                     existing_agent = read(relative)
-                    if not existing_agent or _is_pristine_prior_agent(name, existing_agent):
-                        write(
-                            relative,
-                            (AGENT_TEMPLATE_ROOT / f"{name}.toml.tmpl").read_text(encoding="utf-8"),
-                        )
+                    template = _codex_agent_template(name)
+                    if not secure.exists(relative) or (
+                        existing_agent != template and _is_pristine_prior_agent(name, existing_agent)
+                    ):
+                        model = tomllib.loads(template)["model"]
+                        if model not in available_codex_models:
+                            raise MigrationConflict(
+                                "codex_model_availability_required", f"Model availability is unverified: {model}"
+                            )
+                        write(relative, template)
 
             if include_claude_agent_config:
                 for name in CLAUDE_AGENT_NAMES:
@@ -1924,6 +1965,8 @@ def execute_prompt_upgrade(
     approved_privacy_review: str | None = None,
     include_claude_agent_config: bool = False,
     reviewed_change_ids: list[str] | None = None,
+    *,
+    available_codex_models: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Run report-first migration for an authorized natural-language target-upgrade request."""
     report = build_migration_report(
@@ -2034,6 +2077,7 @@ def execute_prompt_upgrade(
         approved_privacy_review,
         include_claude_agent_config,
         reviewed_change_ids,
+        available_codex_models=available_codex_models,
     )
     if applied.get("update_status") == "question_required":
         agent_action = "ask_targeted_question"
@@ -2043,6 +2087,8 @@ def execute_prompt_upgrade(
             if applied.get("privacy_review", {}).get("status") in {"approval_required", "token_mismatch"}
             else "report_privacy_findings"
         )
+    elif applied.get("update_status") == "codex_model_availability_required":
+        agent_action = "verify_codex_models"
     elif applied.get("success"):
         agent_action = "complete_and_validate"
     else:
@@ -2067,9 +2113,15 @@ def main() -> int:
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--prompt", action="store_true")
-    parser.add_argument("--target-version", default="0.10.0")
+    parser.add_argument("--target-version", default="0.11.0")
     parser.add_argument("--reviewed-change", action="append", default=[])
     parser.add_argument("--include-agent-config", action="store_true")
+    parser.add_argument(
+        "--available-codex-model",
+        action="append",
+        default=[],
+        help="Report a model and prescribed effort verified on the target Codex host. Repeat for each model.",
+    )
     parser.add_argument("--include-claude-agent-config", action="store_true")
     parser.add_argument(
         "--approve-privacy-review",
@@ -2087,6 +2139,7 @@ def main() -> int:
                 args.approve_privacy_review,
                 args.include_claude_agent_config,
                 args.reviewed_change,
+                available_codex_models=tuple(args.available_codex_model),
             )
         elif args.apply:
             result = apply_migration(
@@ -2096,6 +2149,7 @@ def main() -> int:
                 args.approve_privacy_review,
                 args.include_claude_agent_config,
                 args.reviewed_change,
+                available_codex_models=tuple(args.available_codex_model),
             )
         else:
             result = build_migration_report(
@@ -2113,6 +2167,10 @@ def main() -> int:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:
         print(f"{result.get('mode')}: {'ok' if result.get('success') else 'failed'}")
+        if result.get("required_codex_models"):
+            print("Required Codex models: " + ", ".join(result["required_codex_models"]))
+        if result.get("unverified_codex_models"):
+            print("Unverified Codex models: " + ", ".join(result["unverified_codex_models"]))
         for item in result.get("proposed_changes", []):
             print(f"{item['action']}: {item['path']}")
     return 0 if result.get("success") else 1

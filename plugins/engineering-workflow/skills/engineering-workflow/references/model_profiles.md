@@ -6,12 +6,13 @@ Choose a model only after the task-shape route calls for semantic work. Determin
 
 ## Source Snapshot
 
-Verified against current official guidance on 2026-09-23:
+Verified against current official guidance on 2026-11-17:
 
 - `https://developers.openai.com/api/docs/models`
 - `https://developers.openai.com/api/docs/guides/latest-model`
 - `https://learn.chatgpt.com/docs/models`
 - `https://learn.chatgpt.com/docs/agent-configuration/subagents`
+- `https://learn.chatgpt.com/docs/pricing#token-rates`
 
 Revalidate this mapping when supported Codex models or reasoning levels change.
 
@@ -27,27 +28,27 @@ Revalidate this mapping when supported Codex models or reasoning levels change.
 
 ### `explorer`
 
-- model: `gpt-6-sol`
+- model: `gpt-6.2-sol`
 - `model_reasoning_effort`: `low` or `medium`
 - `sandbox_mode`: `read-only`
 - use bounded path scope and distilled evidence
 
 ### `standard`
 
-- model: `gpt-6-sol`
+- model: `gpt-6.2-sol`
 - `model_reasoning_effort`: `medium`
 - use the minimum sandbox needed by the bounded work
 
 ### `review`
 
-- model: `gpt-6-sol`
+- model: `gpt-6.2-sol`
 - `model_reasoning_effort`: `medium`
 - normally use `sandbox_mode: read-only`
-- use `high` on Sol when review complexity warrants it; consider `gpt-6-astra` with `high` effort for high-consequence correctness or security review under the confirmation rule below; use `xhigh` only after representative evaluation shows a material quality gain
+- use `high` on Sol when review complexity warrants it. Consider `gpt-6.2-astra` at `high` for high-consequence review under the confirmation rule below. Use `xhigh` only after representative evaluation shows a material quality gain.
 
 ### `exceptional_quality`
 
-- use `gpt-6-astra` with `high` effort for unusually difficult, high-consequence semantic work when the user requests it or confirms a proposed escalation; keep a selected supported user-pinned model
+- use `gpt-6.2-astra` with `high` effort for unusually difficult, high-consequence semantic work when the user requests it or confirms a proposed escalation. Keep a selected supported user-pinned model.
 - consider `max`, `ultra`, or API pro mode only for difficult quality-first work with measurable acceptance criteria and high error cost
 - compare against the cheaper baseline instead of assuming maximum reasoning wins
 
@@ -55,13 +56,13 @@ Before selecting Astra for a new worker or changing a saved profile from Sol/Lun
 
 ## API And Codex Boundary
 
-When migrating a profile to a GPT-6 model, preserve its effective supported reasoning effort unless deliberately changing the task profile after evaluation. Astra does not support `none`; use `low` as the initial evaluated baseline. Sol and Luna support `none`. If an older profile used `minimal`, start with `low` and compare representative tasks. Standard and routine review default to `medium`; higher review effort requires a task-specific reason.
+When migrating to GPT-6.2 Sol or Astra, preserve the effective supported reasoning effort. Use `low` when migrating from `none` or when an older profile used `minimal`, then compare representative tasks. Both GPT-6.2 models expose `low` through `max` in the API. Codex may also expose `ultra`. Check the active Codex client for model availability and effort values, including for Luna.
 
-Keep `gpt-5.6-terra` as an explicit compatibility fallback for a utility or explorer profile when its GPT-6 recommendation is unavailable in the active Codex client, or when representative evaluation favors the existing profile. Retain the role's `low` or `medium` effort and read-only boundary. This is a deliberate profile choice, not automatic retry or a silent replacement of a user pin. The published API token prices do not make Terra cheaper than Luna for utility work or Sol for explorer work; Codex subscription usage should be assessed in its own environment.
+Use `gpt-6.1-sol` as the explicit compatibility choice for a Sol role when 6.2 Sol is unavailable and the active host offers 6.1 Sol. Keep the role's effort and permissions. Use `gpt-6.1-terra` for visual understanding or computer use when the task needs those capabilities and the host offers them. Keep Luna for bounded utility work. An available `gpt-5.6-terra` remains a compatibility choice for established utility or explorer profiles. Preserve user pins and select compatibility models before execution.
 
-In the Responses API, pro is a reasoning mode selected with `reasoning.mode: "pro"`; it is not a separate model slug. Persisted reasoning and Programmatic Tool Calling are also API features.
+GPT-6.2 Sol and GPT-6.1 Sol have the same standard API token prices. For Codex, evaluate actual usage and time to an accepted result. Model availability can depend on client, plan and workspace policy.
 
-Do not write API-only fields into Codex custom-agent TOML unless current Codex documentation explicitly adds support. This includes async tool flags, steering events, and `configuration_update` items. Never represent pro mode by inventing a separate model slug.
+For GPT-6.2 API tool calling, use Responses. In Responses, pro is a reasoning mode selected with `reasoning.mode: "pro"` where supported. Use only supported native Codex fields in custom-agent TOML. Keep API tool flags, steering events and `configuration_update` items in the API integration.
 
 ## Maintenance Rules
 

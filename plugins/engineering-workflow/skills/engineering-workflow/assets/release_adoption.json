@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "skill_version": "0.10.0",
+  "skill_version": "0.11.0",
   "changes": [
     {
       "id": "documentation-navigation-v1",
@@ -34,6 +34,13 @@
       "id": "stable-skill-update-runtime-v1",
       "introduced_in": "0.10.0",
       "summary": "Check trusted stable releases with installation-scoped policy and verified native delivery.",
+      "affected_owner_patterns": [],
+      "adoption_requirement": "runtime_only"
+    },
+    {
+      "id": "codex-gpt62-profiles-v1",
+      "introduced_in": "0.11.0",
+      "summary": "Select current Codex model profiles and verify host availability before writing optional generated presets.",
       "affected_owner_patterns": [],
       "adoption_requirement": "runtime_only"
     }

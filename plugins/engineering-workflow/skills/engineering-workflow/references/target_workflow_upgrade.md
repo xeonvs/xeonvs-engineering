@@ -48,6 +48,7 @@ The user may explicitly request report-only behavior; then invoke `--plan`. Code
 - `--prompt`
 - `--target-version`
 - `--include-agent-config`
+- `--available-codex-model` (repeatable, verified on the target Codex host)
 - `--include-claude-agent-config`
 - `--reviewed-change` (repeatable agent-reviewed adoption ID)
 - `--approve-privacy-review`
@@ -191,6 +192,15 @@ When `--include-agent-config` is present or the target's valid workflow state re
 - create missing optional agent files only after the current or prior opt-in
 - replace an existing agent file only when its complete bytes match the registered prior generated template; preserve every customized model pin and instruction
 - show the exact config diff
+
+The plan report lists `required_codex_models` for generated agent files it
+would create or refresh. Verify those models and their prescribed effort in
+the target Codex client. Pass each verified slug via `--available-codex-model`
+when applying. The flag supplies a host observation and retains the separate
+configuration opt-in. If a required model is unavailable or cannot be
+verified, apply returns `codex_model_availability_required` and preserves the
+target. Keep the current profiles and use the report to explain the limitation.
+An upgrade with no generated agent changes requires no model availability probe.
 
 Never place Responses API-only fields in Codex TOML.
 
