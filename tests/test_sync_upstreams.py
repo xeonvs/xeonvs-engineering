@@ -22,8 +22,8 @@ class SyncConfigurationTest(unittest.TestCase):
             path.name: path.read_text()
             for path in sorted((ROOT / '.github/workflows').glob('*.yml'))
         }
-        setup_python = 'actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97'
-        release_action = 'softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64'
+        setup_python = 'actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0'
+        release_action = 'softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3'
 
         for name in ('ci.yml', 'release.yml', 'sync-upstreams.yml'):
             self.assertIn(setup_python, workflows[name])
