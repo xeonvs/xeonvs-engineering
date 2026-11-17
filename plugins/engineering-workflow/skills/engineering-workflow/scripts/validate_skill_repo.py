@@ -531,12 +531,12 @@ def _validate_agent_profiles(repo_root: Path) -> list[str]:
     if utility.get("sandbox_mode") != "read-only":
         issues.append("Utility agent must remain read-only")
     explorer = parsed.get("explorer", {})
-    if explorer.get("model") != "gpt-" + "6-sol" or explorer.get("model_reasoning_effort") != "medium":
+    if explorer.get("model") != "gpt-" + "6.2-sol" or explorer.get("model_reasoning_effort") != "medium":
         issues.append("Explorer agent must use the current balanced read-heavy profile")
     if explorer.get("sandbox_mode") != "read-only":
         issues.append("Explorer agent must remain read-only")
     reviewer = parsed.get("reviewer", {})
-    if reviewer.get("model") != "gpt-" + "6-sol":
+    if reviewer.get("model") != "gpt-" + "6.2-sol":
         issues.append("Reviewer agent must use the current Codex review model profile")
     if reviewer.get("model_reasoning_effort") != "medium" or reviewer.get("sandbox_mode") != "read-only":
         issues.append("Reviewer agent must use medium reasoning in read-only mode")

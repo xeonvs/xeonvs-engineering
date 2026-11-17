@@ -4,23 +4,23 @@
   "bundles": [
     {
       "name": "engineering-workflow",
-      "version": "0.10.0",
+      "version": "0.11.0",
       "source_repository": "https://github.com/xeonvs/codex-engineering-workflow",
       "source_policy": "latest-tag",
-      "source_ref": "v0.10.0",
-      "source_commit": "93f5163396aecc3005fe37df969ae771b78ddd34",
+      "source_ref": "v0.11.0",
+      "source_commit": "329aac8a076f6b766a800b701b3fb641bfe6e406",
       "source_path": "plugins/engineering-workflow",
-      "bundle_sha256": "bff29b06f8672492a594de3b9595781ac0803e5d09b8ffffc2c2262a9ce031d1"
+      "bundle_sha256": "d369fab2ce2bf72141111a07b632f0cd38faab3ec36e2947ef6e533e18f17b74"
     },
     {
       "name": "tgrep-search",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "source_repository": "https://github.com/xeonvs/tgrep-search",
       "source_policy": "latest-tag",
-      "source_ref": "v1.1.0",
-      "source_commit": "115976a0a590582ffedd4ce0e58b79861b99b2e9",
+      "source_ref": "v1.1.1",
+      "source_commit": "b314266225af4ebebb05ce18c6ff7ecc735f491e",
       "source_path": "plugins/tgrep-search",
-      "bundle_sha256": "266566c232528624b8913bd5b1e34d87347d5e0669c4779c8ec6cdfb454aac72"
+      "bundle_sha256": "5fdf9676ebb2271509e47a4c0fc5183832d4c21666affc4feb389b773f473339"
     }
   ]
 }

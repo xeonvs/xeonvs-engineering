@@ -8,7 +8,7 @@ Use this file as a short route map, not as a project manual. Read the matched ow
 
 - `{{ entrypoint_hint }}`
 - `{{ subsystem_hint }}`
-- `tests/` — regression and contract checks
+- `tests/` — regression and contract checks when present
 
 ## Workflow Sources Of Truth
 
@@ -23,31 +23,31 @@ At a new session or material context recovery, follow the installed documentatio
 ## Task Routes
 
 <!-- ew:route id="documentation" triggers="documentation discovery|documentation writing|documented behavior change|document paths|documentation restructuring" owners="skill://engineering-workflow/references/documentation_navigation.md" guards="manual_review:verify affected documented behavior and local owners plus managed navigation and exact approval for restructuring" -->
-| `documentation` | discovery, writing, documented behavior/path changes, or restructuring | installed documentation reference and existing local writing owners | affected content, navigation, and exact restructuring approval |
+- `documentation` — For discovery, writing, behavior or path changes, and restructuring, follow the installed documentation reference and local writing owners. Check affected content and navigation, and obtain exact approval for restructuring.
 
 <!-- ew:route id="workflow-updates" triggers="new skill release|skill self-update|target upgrade proposal|release adoption" owners="skill://engineering-workflow/references/skill_update.md|skill://engineering-workflow/references/target_workflow_upgrade.md" guards="manual_review:verify installation policy stable provenance and target adoption before applying authorized changes" -->
-| `workflow-updates` | stable skill updates and target release adoption | installed update and target-upgrade references | verified native installation and reviewed target proposal |
+- `workflow-updates` — For stable skill updates and target adoption, follow the installed update and target-upgrade references. Verify native installation and review the target proposal.
 
 <!-- ew:route id="execution-context" triggers="host uncertainty|capability uncertainty" owners="skill://engineering-workflow/references/platform_compatibility.md" guards="manual_review:resolve uncertain host capabilities from current session evidence" -->
-| `execution-context` | host or capability uncertainty | installed platform reference | resolve uncertainty; reuse established session facts |
+- `execution-context` — Resolve host or capability uncertainty through the installed platform reference. Reuse established session facts.
 
 <!-- ew:route id="scope-decision" triggers="material clarification|additional authorization" owners="skill://engineering-workflow/references/question_matrix.md" guards="manual_review:check existing authorization and available evidence before asking" -->
-| `scope-decision` | material clarification or additional authorization | installed question policy | ask only for an unresolved material choice or permission |
+- `scope-decision` — Check material choices and additional permissions against the installed question policy.
 
 <!-- ew:route id="task-handoff" triggers="delegation|context recovery|execution handoff|large transient evidence" owners="skill://engineering-workflow/references/agent_orchestration.md|skill://engineering-workflow/references/planning_and_backlog.md" guards="manual_review:verify self-contained scope accessible evidence durable state and root acceptance" -->
-| `task-handoff` | delegation, context recovery, execution handoff, or large transient evidence | installed orchestration and planning references | self-contained scope, durable state, accessible evidence, and root acceptance |
+- `task-handoff` — For delegation, recovery, handoff, or large outputs, follow the installed orchestration and planning references. Check the handoff scope, evidence access, durable state and root acceptance.
 
 <!-- ew:route id="planning" triggers="PLANS.md|docs/codex/TASKS_BACKLOG.md|docs/archive/**|workflow-state plan archive|plan closure" owners="skill://engineering-workflow/references/planning_and_backlog.md" guards="lint:plan-lifecycle" -->
-| `planning` | plan, backlog, closure, or default/custom workflow-state archive | installed planning reference | `lint:plan-lifecycle` |
+- `planning` — For plans, backlog, archives and closure, follow the installed planning reference and run `lint:plan-lifecycle`.
 
 <!-- ew:route id="workflow-instructions" triggers="AGENTS.md|docs/engineering/**|docs/codex/AGENT_EXECUTION_PITFALLS.md" owners="skill://engineering-workflow/references/instruction_lifecycle.md|docs/engineering/project_principles.md" guards="lint:instruction-contract" -->
-| `workflow-instructions` | instruction owner, route, or incident change | instruction lifecycle and project principles | `lint:instruction-contract` |
+- `workflow-instructions` — For changes to instruction owners, routes or incidents, follow the instruction lifecycle and project principles. Run `lint:instruction-contract`.
 
 <!-- ew:route id="repository-change" triggers="**" owners="docs/engineering/project_principles.md" guards="manual_review:run repository gates mapped by the owner" -->
-| `repository-change` | every repository-changing task, alongside specialized routes | project principles and its domain-owner links | repository-specific gates |
+- `repository-change` — For every repository change, apply the project principles and the gates named by the relevant domain owners.
 
 <!-- ew:route id="long-running-execution" triggers="long-running commands|builds|tests|local processes|polling|terminal sessions" owners="docs/engineering/project_principles.md" guards="manual_review:verify completion evidence deadline bounded output and task-owned cleanup" -->
-| `long-running-execution` | long-running local command, waiter, polling, or process cleanup | project principles and installed orchestration contract | completion-evidence review |
+- `long-running-execution` — For long-running commands and process cleanup, follow the project principles and installed orchestration contract. Verify completion and cleanup of task-owned processes.
 
 ## Route Maintenance
 

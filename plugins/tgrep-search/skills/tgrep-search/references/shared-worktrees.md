@@ -6,10 +6,10 @@ processes. Ordinary single-root `index`/`serve` remains the default. Sharing
 does not guarantee lower latency: first attachment verifies checkout contents,
 and CRLF or checkout filters can require large private overlays.
 
-This guidance targets tgrep 1.2.4. Read the official
-[managed startup example](https://github.com/microsoft/tgrep/blob/v1.2.4/README.md#managed-shared-lifecycle-opt-in),
-[policy](https://github.com/microsoft/tgrep/blob/v1.2.4/SHARED_WORKTREE_INDEXES.md#managed-policy),
-and [client contract](https://github.com/microsoft/tgrep/blob/v1.2.4/SHARED_WORKTREE_INDEXES.md#managed-client-contract)
+This guidance targets tgrep 1.2.7. Read the official
+[managed startup example](https://github.com/microsoft/tgrep/blob/v1.2.7/README.md#managed-shared-lifecycle-opt-in),
+[policy](https://github.com/microsoft/tgrep/blob/v1.2.7/SHARED_WORKTREE_INDEXES.md#managed-policy),
+and [client contract](https://github.com/microsoft/tgrep/blob/v1.2.7/SHARED_WORKTREE_INDEXES.md#managed-client-contract)
 before configuring an integration. They own request shapes, supported methods,
 budgets and recovery; this skill does not supply another client or policy schema.
 
@@ -51,11 +51,25 @@ can fail or be cancelled while a view remains ready; inspect verification
 outcome, not only the readiness bit. Use `tgrep --no-index` or `rg` when current
 disk contents are required, retaining the intended filters and eligibility rules.
 
+Metadata checks rewalk membership and read changed, hinted, or unverified files.
+Full content verification rereads every admitted file, including rewrites that
+preserve size and timestamps. With default settings the respective minimum waits
+are two and thirty minutes. Work queues, previous pass cost and failures can
+extend both. Inspect the verification tier and successful content age in
+`last_verification`. Use `views.refresh` when the managed view itself needs a
+full content check and wait for its result. Use a direct scan for a single
+current-disk query.
+
+Narrow inventory requests with a subdirectory, `--glob` or `-t` where relevant.
+With a compatible daemon, shared `--files` applies glob and type filters
+before transmitting paths, reducing the response payload.
+
 ## Teardown And Storage
 
 Detach every owned lease and inspect its reader/root-handle drain result before
 removing a worktree. Release the owner under the client contract and end its
 holder only when that owned lifetime is over. Stop only daemons this task owns,
-after their clients drain. Shared storage is not disposable scratch space:
+after their clients drain. A busy `stop-if-idle` leaves admitted work running.
+Shared storage is not disposable scratch space:
 never recursively delete it as a substitute for managed collection. Collection,
 policy changes and migration require their own applicable authorization.
